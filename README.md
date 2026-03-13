@@ -1,1 +1,0 @@
-# Trabalho-do-antonio-de-Paula-
