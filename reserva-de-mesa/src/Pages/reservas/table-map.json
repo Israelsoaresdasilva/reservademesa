@@ -1,0 +1,23 @@
+[
+  { "id": "t1", "number": 1,  "capacity": 4, "position": [-4.0, 0.15,  4.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "t2", "number": 2,  "capacity": 2, "position": [-1.5, 0.15, 4.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "t3", "number": 3,  "capacity": 4, "position": [ 1.5, 0.15, 4.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "t4", "number": 4,  "capacity": 4, "position": [ 4.0, 0.15, 4.0], "rotation": [0,0,0], "status":"available" },
+
+  { "id": "t5", "number": 5,  "capacity": 4, "position": [-3.0, 0.15, 1.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "t6", "number": 6,  "capacity": 4, "position": [ 0.0, 0.15, 1.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "t7", "number": 7,  "capacity": 4, "position": [ 3.0, 0.15, 1.0], "rotation": [0,0,0], "status":"available" },
+
+  { "id": "t8", "number": 8,  "capacity": 6, "position": [-4.0, 0.15,-1.5], "rotation": [0,0,0], "status":"available" },
+  { "id": "t9", "number": 9,  "capacity": 4, "position": [-1.0, 0.15,-1.5], "rotation": [0,0,0], "status":"available" },
+  { "id": "t10","number": 10, "capacity": 4, "position": [ 1.0, 0.15,-1.5], "rotation": [0,0,0], "status":"available" },
+  { "id": "t11","number": 11, "capacity": 4, "position": [ 4.0, 0.15,-1.5], "rotation": [0,0,0], "status":"available" },
+
+  { "id": "t12","number": 12, "capacity": 4, "position": [-6.0, 0.15,-3.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "t13","number": 13, "capacity": 2, "position": [ 0.0, 0.15,-5.5], "rotation": [0,0,0], "status":"available" },
+
+  { "id": "r1", "number": 21, "capacity": 4, "position": [ 6.5, 0.15,-3.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "r2", "number": 22, "capacity": 4, "position": [ 6.5, 0.15,-1.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "r3", "number": 23, "capacity": 4, "position": [ 6.5, 0.15, 1.0], "rotation": [0,0,0], "status":"available" },
+  { "id": "r4", "number": 24, "capacity": 6, "position": [ 6.5, 0.15, 3.0], "rotation": [0,0,0], "status":"available" }
+]
