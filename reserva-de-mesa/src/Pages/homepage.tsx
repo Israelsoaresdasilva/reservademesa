@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import '../App.css'
+import { useNotifications } from '../features/notifications'
 
 const seafoodHighlights = [
 	{
@@ -93,6 +94,16 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 function App() {
 	const [sidebarOpen, setSidebarOpen] = useState(false)
 	const navigate = useNavigate()
+	const { notify } = useNotifications()
+
+	const handleGoToReserva = () => {
+		notify({
+			type: 'info',
+			title: 'Iniciando reserva',
+			message: 'Você foi direcionado para escolher sua mesa.',
+		})
+		navigate('/reservas')
+	}
 	return (
 		<main className="home-page">
 			<Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -118,7 +129,7 @@ function App() {
 				<div className="top-brand" aria-label="Ocean Blue logo">
 					<img src="/logo.png" alt="Ocean Blue" />
 				</div>
-				<button className="reserve-button" type="button" onClick={() => navigate('/reservas')}>
+				<button className="reserve-button" type="button" onClick={handleGoToReserva}>
 					RESERVAR
 				</button>
 			</header>
