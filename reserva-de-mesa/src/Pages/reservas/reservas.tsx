@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useNotifications } from "../../features/notifications";
 
 interface Mesa {
   id: number;
@@ -65,8 +66,29 @@ function formatCpf(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
+function formatDateBr(date: string): string {
+  if (!date) return "-";
+  return date.split("-").reverse().join("/");
+}
+
+function todayIsoDate(): string {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function diffDays(fromDate: string, toDate: string): number {
+  const from = new Date(`${fromDate}T12:00:00`);
+  const to = new Date(`${toDate}T12:00:00`);
+  const ms = from.getTime() - to.getTime();
+  return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
 export default function Reservas() {
   const navigate = useNavigate();
+  const { notify } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [reservas, setReservas] = useState<Reserva[]>(loadReservas);
   const [selecionadas, setSelecionadas] = useState<number[]>([]);
@@ -85,6 +107,9 @@ export default function Reservas() {
   // Permite nova reserva se o dia for diferente
   const reservaBloqueada = reservas.some(r => r.cpf === cpfInput.replace(/\D/g, "") && r.data === dataReserva);
   const receiptRef = useRef<HTMLDivElement>(null);
+  const demoTimersRef = useRef<number[]>([]);
+  const avisoInicialRef = useRef(false);
+  const feedbackNotificadoRef = useRef<string>("");
 
   // Impede novas reservas após confirmação
   const reservaConfirmada = !!lastReserva;
@@ -95,6 +120,67 @@ export default function Reservas() {
     const timer = setTimeout(() => setLoading(false), 1200);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (avisoInicialRef.current) return;
+    avisoInicialRef.current = true;
+    notify({
+      type: "info",
+      title: "Aviso do restaurante",
+      message: "Chegue com 10 minutos de antecedencia para agilizar seu atendimento.",
+    });
+  }, [notify]);
+
+  useEffect(() => {
+    if (!lastReserva?.data) return;
+    const hoje = todayIsoDate();
+    if (lastReserva.data >= hoje) return;
+
+    const feedbackKey = `${lastReserva.cpf}-${lastReserva.data}`;
+    if (feedbackNotificadoRef.current === feedbackKey) return;
+    feedbackNotificadoRef.current = feedbackKey;
+
+    notify({
+      type: "info",
+      title: "Feedback pos-reserva",
+      message: `Como foi sua experiencia do dia ${formatDateBr(lastReserva.data)}? Sua opiniao ajuda muito.`,
+    });
+  }, [lastReserva, notify]);
+
+  useEffect(() => {
+    return () => {
+      demoTimersRef.current.forEach((id) => window.clearTimeout(id));
+      demoTimersRef.current = [];
+    };
+  }, []);
+
+  function dispararNotificacoesDemo() {
+    demoTimersRef.current.forEach((id) => window.clearTimeout(id));
+    demoTimersRef.current = [];
+
+    const baseDate = dataReserva || todayIsoDate();
+    const lista = [
+      { type: "success" as const, title: "Reserva confirmada", message: `Mesa 3 reservada para ${formatDateBr(baseDate)}.` },
+      { type: "info" as const, title: "Lembrete da reserva", message: "Faltam 24h para sua reserva. Nos vemos em breve." },
+      { type: "info" as const, title: "Prazo de chegada", message: "Sua mesa fica reservada por ate 15 minutos apos o horario." },
+      { type: "info" as const, title: "Reserva alterada", message: "Sua reserva foi alterada para outra data com sucesso." },
+      { type: "error" as const, title: "Reserva cancelada", message: "Sua reserva foi cancelada. Toque em Reservar novamente." },
+      { type: "error" as const, title: "Mesa indisponivel", message: "Esta mesa acabou de ser reservada. Escolha outra opcao no mapa." },
+      { type: "info" as const, title: "Pagamento e consumo", message: "Para grupos grandes pode haver consumo minimo. Consulte a equipe." },
+      { type: "error" as const, title: "Confirmacao pendente", message: "Revise nome, CPF e data antes de concluir a reserva." },
+      { type: "success" as const, title: "Check-in liberado", message: "Sua reserva e hoje. Check-in disponivel na recepcao." },
+      { type: "success" as const, title: "Beneficio liberado", message: "Cliente fidelidade: voce ganhou uma cortesia especial." },
+      { type: "info" as const, title: "Aviso do restaurante", message: "Hoje teremos menu especial de frutos do mar a noite." },
+      { type: "info" as const, title: "Feedback pos-reserva", message: "Como foi sua experiencia? Avalie sua visita em 1 minuto." },
+    ];
+
+    lista.forEach((item, index) => {
+      const timerId = window.setTimeout(() => {
+        notify(item);
+      }, index * 160);
+      demoTimersRef.current.push(timerId);
+    });
+  }
 
   function getStatus(id: number): MesaStatus {
     if (reservadas.includes(id)) return "reservada";
@@ -107,9 +193,21 @@ export default function Reservas() {
     if (reservaBloqueada) {
       setConfirmMsg("Você já possui uma reserva para este dia.");
       setTimeout(() => setConfirmMsg("") , 4000);
+      notify({
+        type: "error",
+        title: "Reserva já existente",
+        message: "Você já possui uma reserva para a data selecionada.",
+      });
       return;
     }
-    if (reservadas.includes(id)) return;
+    if (reservadas.includes(id)) {
+      notify({
+        type: "error",
+        title: "Mesa indisponivel",
+        message: `A mesa ${id} ja esta reservada. Escolha outra mesa no mapa.`,
+      });
+      return;
+    }
     // Only allow one selection at a time
     if (selecionadas.length === 0) {
       setSelecionadas([id]);
@@ -125,32 +223,67 @@ export default function Reservas() {
     if (reservaBloqueada) {
       setConfirmMsg("Você já possui uma reserva para este dia.");
       setTimeout(() => setConfirmMsg(""), 4000);
+      notify({
+        type: "error",
+        title: "Reserva bloqueada",
+        message: "Você já possui uma reserva para este dia.",
+      });
       return;
     }
     if (selecionadas.length === 0) return;
     if (!dataReserva) {
       setConfirmMsg("Selecione a data da reserva antes de confirmar.");
       setTimeout(() => setConfirmMsg(""), 3000);
+      notify({
+        type: "info",
+        title: "Data obrigatória",
+        message: "Selecione uma data antes de confirmar sua reserva.",
+      });
       return;
     }
     setCpfInput("");
     setNomeInput("");
     setCpfError("");
+    notify({
+      type: "info",
+      title: "Prazo de chegada",
+      message: "A mesa fica reservada por ate 15 minutos apos o horario combinado.",
+    });
+    notify({
+      type: "info",
+      title: "Pagamento e consumo",
+      message: "Para grupos maiores, pode haver consumo minimo no periodo noturno.",
+    });
     setShowCpfModal(true);
   }
 
   function handleConfirmarComCpf() {
     if (!nomeInput.trim()) {
       setCpfError("Por favor, informe seu nome.");
+      notify({
+        type: "error",
+        title: "Confirmacao pendente",
+        message: "Informe seu nome para concluir a reserva.",
+      });
       return;
     }
     const cpfDigits = cpfInput.replace(/\D/g, "");
     if (cpfDigits.length !== 11) {
       setCpfError("CPF inválido. Deve conter 11 números.");
+      notify({
+        type: "error",
+        title: "Confirmacao pendente",
+        message: "CPF invalido. Digite os 11 numeros para continuar.",
+      });
       return;
     }
     if (reservas.some((r) => r.cpf === cpfDigits && r.data === dataReserva)) {
       setCpfError("Este CPF já possui uma reserva para este dia.");
+      notify({
+        type: "error",
+        title: "Reserva duplicada",
+        message: "Este CPF ja possui reserva para a mesma data.",
+      });
       return;
     }
     const novaReserva: Reserva = { cpf: cpfDigits, mesas: [...selecionadas], data: dataReserva, nome: nomeInput.trim() };
@@ -165,6 +298,57 @@ export default function Reservas() {
     setShowReceipt(novaReserva);
     setLastReserva(novaReserva);
     localStorage.setItem("ultima_reserva_confirmada_v2", JSON.stringify(novaReserva));
+
+    const hoje = todayIsoDate();
+    const diasParaReserva = diffDays(novaReserva.data, hoje);
+    const totalReservasCliente = novasReservas.filter((r) => r.cpf === cpfDigits).length;
+
+    if (lastReserva && lastReserva.cpf === cpfDigits && lastReserva.data !== novaReserva.data) {
+      notify({
+        type: "info",
+        title: "Reserva alterada",
+        message: `Sua reserva foi atualizada para ${formatDateBr(novaReserva.data)}.`,
+      });
+    }
+
+    notify({
+      type: "success",
+      title: "Reserva confirmada",
+      message: `Mesa ${novaReserva.mesas.join(", ")} reservada para ${formatDateBr(novaReserva.data)}.`,
+    });
+
+    if (diasParaReserva === 1) {
+      notify({
+        type: "info",
+        title: "Lembrete da reserva",
+        message: "Faltam 24h para sua reserva. Te esperamos.",
+      });
+    } else if (diasParaReserva === 0) {
+      notify({
+        type: "info",
+        title: "Lembrete da reserva",
+        message: "Sua reserva e hoje. Faltam poucas horas para seu horario.",
+      });
+      notify({
+        type: "success",
+        title: "Check-in liberado",
+        message: "Pode fazer seu check-in na entrada ao chegar no restaurante.",
+      });
+    } else if (diasParaReserva > 1) {
+      notify({
+        type: "info",
+        title: "Lembrete programado",
+        message: "Vamos te lembrar novamente perto da data da reserva.",
+      });
+    }
+
+    if (totalReservasCliente >= 2) {
+      notify({
+        type: "success",
+        title: "Beneficio fidelidade",
+        message: "Voce recebeu um beneficio especial por reservar novamente.",
+      });
+    }
   }
 
   const handleBaixarReserva = useCallback(() => {
@@ -205,6 +389,11 @@ export default function Reservas() {
     }
     setConfirmMsg("Reserva cancelada.");
     setTimeout(() => setConfirmMsg("") , 4000);
+    notify({
+      type: "error",
+      title: "Reserva cancelada",
+      message: `A reserva do dia ${formatDateBr(data)} foi cancelada.`,
+    });
   }
 
   
@@ -701,7 +890,27 @@ export default function Reservas() {
             Confirmar Reserva
           </button>
 
-          
+          <button
+            onClick={dispararNotificacoesDemo}
+            type="button"
+            style={{
+              width: "100%",
+              padding: "11px 0",
+              fontSize: "0.75rem",
+              fontWeight: 700,
+              borderRadius: 6,
+              border: "1px solid rgba(77, 179, 216, 0.35)",
+              background: "rgba(13, 49, 79, 0.45)",
+              color: "#9ed0e6",
+              cursor: "pointer",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase" as const,
+              fontFamily: "Manrope, sans-serif",
+            }}
+          >
+            Ver Todas Notificacoes
+          </button>
+
         </div>
       </aside>
 
