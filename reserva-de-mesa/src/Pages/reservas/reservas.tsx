@@ -10,21 +10,40 @@ interface Mesa {
   lugares: number;
 }
 
-const MESAS: Mesa[] = [
-  { id: 1, label: "1", x: 12, y: 18, lugares: 2 },
-  { id: 2, label: "2", x: 30, y: 18, lugares: 4 },
-  { id: 3, label: "3", x: 50, y: 18, lugares: 4 },
-  { id: 4, label: "4", x: 70, y: 18, lugares: 2 },
-  { id: 5, label: "5", x: 88, y: 18, lugares: 6 },
-  { id: 6, label: "6", x: 12, y: 50, lugares: 4 },
-  { id: 7, label: "7", x: 30, y: 50, lugares: 2 },
-  { id: 8, label: "8", x: 50, y: 50, lugares: 4 },
-  { id: 9, label: "9", x: 70, y: 50, lugares: 6 },
-  { id: 10, label: "10", x: 88, y: 50, lugares: 2 },
-  { id: 11, label: "11", x: 20, y: 80, lugares: 4 },
-  { id: 12, label: "12", x: 50, y: 80, lugares: 8 },
-  { id: 13, label: "13", x: 80, y: 80, lugares: 4 },
+const DEFAULT_MESAS: Mesa[] = [
+  { id: 1, label: "1", x: 15.41, y: 20.3, lugares: 8 },
+  { id: 2, label: "2", x: 23.327, y: 19.909, lugares: 8 },
+  { id: 3, label: "3", x: 31.021, y: 19.714, lugares: 4 },
+  { id: 4, label: "4", x: 31.244, y: 42.936, lugares: 4 },
+  { id: 5, label: "5", x: 65.254, y: 42.741, lugares: 4 },
+  { id: 6, label: "6", x: 65.254, y: 65.963, lugares: 4 },
+  { id: 7, label: "7", x: 64.92, y: 77.866, lugares: 4 },
+  { id: 8, label: "8", x: 55.665, y: 78.256, lugares: 4 },
+  { id: 9, label: "9", x: 49.42, y: 75.524, lugares: 4 },
+  { id: 10, label: "10", x: 41.726, y: 78.061, lugares: 4 },
+  { id: 11, label: "11", x: 30.352, y: 74.939, lugares: 4 },
+  { id: 12, label: "12", x: 23.327, y: 74.549, lugares: 4 },
+  { id: 13, label: "13", x: 80.308, y: 16.982, lugares: 4 },
+  { id: 14, label: "14", x: 89.897, y: 17.568, lugares: 4 },
+  { id: 15, label: "15", x: 75.513, y: 27.325, lugares: 4 },
+  { id: 16, label: "16", x: 89.786, y: 34.155, lugares: 4 },
+  { id: 17, label: "17", x: 86.218, y: 47.034, lugares: 4 },
+  { id: 18, label: "18", x: 75.178, y: 47.229, lugares: 4 },
+  { id: 19, label: "19", x: 75.736, y: 58.937, lugares: 4 },
+  { id: 20, label: "20", x: 84.88, y: 58.742, lugares: 4 },
+  { id: 21, label: "21", x: 86.441, y: 70.06, lugares: 4 },
+  { id: 22, label: "22", x: 90.232, y: 84.111, lugares: 4 },
+  { id: 23, label: "23", x: 80.085, y: 84.891, lugares: 4 },
 ];
+
+function loadCalibratedMesas(): Mesa[] {
+  try {
+    const saved = localStorage.getItem("mesas_calibradas");
+    return saved ? JSON.parse(saved) : DEFAULT_MESAS;
+  } catch {
+    return DEFAULT_MESAS;
+  }
+}
 
 type MesaStatus = "livre" | "selecionada" | "reservada";
 
@@ -40,6 +59,9 @@ interface Reserva {
   mesas: number[];
   data: string; // YYYY-MM-DD
 }
+
+// Mesas bloqueadas (reservadas por outras pessoas — apenas visuais no mapa)
+const MESAS_BLOQUEADAS: number[] = [3, 5, 7, 14, 17, 21];
 
 function loadReservas(): Reserva[] {
   try {
@@ -90,6 +112,7 @@ export default function Reservas() {
   const navigate = useNavigate();
   const { notify } = useNotifications();
   const [loading, setLoading] = useState(true);
+  const mesas = loadCalibratedMesas();
   const [reservas, setReservas] = useState<Reserva[]>(loadReservas);
   const [selecionadas, setSelecionadas] = useState<number[]>([]);
   const [confirmMsg, setConfirmMsg] = useState("");
@@ -114,7 +137,8 @@ export default function Reservas() {
   // Impede novas reservas após confirmação
   const reservaConfirmada = !!lastReserva;
 
-  const reservadas = getMesasReservadas(reservas);
+  const reservadasUsuario = getMesasReservadas(reservas);
+  const reservadas = [...new Set([...MESAS_BLOQUEADAS, ...reservadasUsuario])];
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1200);
@@ -215,8 +239,15 @@ export default function Reservas() {
     } else if (selecionadas.includes(id)) {
       setSelecionadas([]);
       setConfirmMsg("");
+    } else {
+      setConfirmMsg("Não é possível reservar duas mesas no mesmo dia.");
+      setTimeout(() => setConfirmMsg(""), 4000);
+      notify({
+        type: "error",
+        title: "Limite de reserva",
+        message: "Não é possível reservar duas mesas no mesmo dia. Finalize a reserva atual primeiro.",
+      });
     }
-    // If already one selected and clicking another, do nothing
   }
 
   function handleAbrirModal() {
@@ -399,7 +430,7 @@ export default function Reservas() {
   
 
   const totalLugaresSelecionados = selecionadas.reduce(
-    (acc, id) => acc + (MESAS.find((m) => m.id === id)?.lugares ?? 0),
+    (acc, id) => acc + (mesas.find((m) => m.id === id)?.lugares ?? 0),
     0
   );
 
@@ -642,7 +673,7 @@ export default function Reservas() {
               {selecionadas
                 .sort((a, b) => a - b)
                 .map((id) => {
-                  const mesa = MESAS.find((m) => m.id === id)!;
+                  const mesa = mesas.find((m) => m.id === id)!;
                   return (
                     <div
                       key={id}
@@ -752,22 +783,40 @@ export default function Reservas() {
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleCancelarReservaPorCpfData(reserva.cpf, reserva.data)}
-                    style={{
-                      background: "rgba(231,76,60,0.12)",
-                      border: "1px solid rgba(231,76,60,0.3)",
-                      color: "#e74c3c",
-                      cursor: "pointer",
-                      fontSize: "0.7rem",
-                      padding: "4px 10px",
-                      borderRadius: 6,
-                      fontWeight: 600,
-                    }}
-                    title="Cancelar esta reserva"
-                  >
-                    Cancelar
-                  </button>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <button
+                      onClick={() => setShowReceipt(reserva)}
+                      style={{
+                        background: "rgba(77,179,216,0.12)",
+                        border: "1px solid rgba(77,179,216,0.3)",
+                        color: "#4db3d8",
+                        cursor: "pointer",
+                        fontSize: "0.7rem",
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        fontWeight: 600,
+                      }}
+                      title="Ver reserva"
+                    >
+                      Ver Reserva
+                    </button>
+                    <button
+                      onClick={() => handleCancelarReservaPorCpfData(reserva.cpf, reserva.data)}
+                      style={{
+                        background: "rgba(231,76,60,0.12)",
+                        border: "1px solid rgba(231,76,60,0.3)",
+                        color: "#e74c3c",
+                        cursor: "pointer",
+                        fontSize: "0.7rem",
+                        padding: "4px 10px",
+                        borderRadius: 6,
+                        fontWeight: 600,
+                      }}
+                      title="Cancelar esta reserva"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -984,12 +1033,29 @@ export default function Reservas() {
               }}
             />
 
-            {/* Mesas clicáveis */}
-            {MESAS.map((mesa) => {
+            {/* Mesas clicáveis (dinâmicas — calibradas) */}
+            {mesas.length === 0 && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#5a8faa",
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  textAlign: "center",
+                  pointerEvents: "none",
+                }}
+              >
+                Nenhuma mesa calibrada.<br />Clique em "Calibrar" para posicionar as mesas.
+              </div>
+            )}
+            {mesas.map((mesa) => {
               const status = getStatus(mesa.id);
               const colors = STATUS_COLORS[status];
               const isReservada = status === "reservada";
-              // Oculta mesas se qualquer modal estiver aberta
               const modalAberta = !!showCpfModal || !!showReceipt;
               return (
                 <button
@@ -1002,20 +1068,20 @@ export default function Reservas() {
                       ? `Mesa ${mesa.label} — Clique para desselecionar`
                       : `Mesa ${mesa.label} — ${mesa.lugares} lugares`
                   }
-                  disabled={(typeof modalAberta === "boolean" ? modalAberta : false) || (typeof isReservada === "boolean" ? isReservada : false)}
+                  disabled={modalAberta || isReservada}
                   style={{
                     position: "absolute",
                     left: `${mesa.x}%`,
                     top: `${mesa.y}%`,
                     transform: "translate(-50%, -50%)",
-                    width: 42,
-                    height: 42,
+                    width: 28,
+                    height: 28,
                     borderRadius: "50%",
                     background: colors.bg,
-                    border: `3px solid ${colors.border}`,
+                    border: `2px solid ${colors.border}`,
                     color: colors.text,
                     fontWeight: 700,
-                    fontSize: "0.9rem",
+                    fontSize: "0.65rem",
                     fontFamily: "Manrope, sans-serif",
                     cursor: modalAberta ? "not-allowed" : isReservada ? "not-allowed" : "pointer",
                     display: modalAberta ? "none" : "flex",
@@ -1325,7 +1391,7 @@ export default function Reservas() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Lugares</span>
                   <span style={{ fontSize: "1.05rem", fontWeight: 600 }}>
-                    {showReceipt.mesas.reduce((acc, id) => acc + (MESAS.find((m) => m.id === id)?.lugares ?? 0), 0)}
+                    {showReceipt.mesas.reduce((acc, id) => acc + (mesas.find((m) => m.id === id)?.lugares ?? 0), 0)}
                   </span>
                 </div>
               </div>
