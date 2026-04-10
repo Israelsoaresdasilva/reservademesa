@@ -60,8 +60,22 @@ interface Reserva {
   data: string; // YYYY-MM-DD
 }
 
-// Mesas bloqueadas (reservadas por outras pessoas — apenas visuais no mapa)
-const MESAS_BLOQUEADAS: number[] = [3, 5, 7, 14, 17, 21];
+
+// Função para gerar mesas bloqueadas aleatórias por dia
+function getMesasBloqueadas(dia: string, totalMesas: number[]): number[] {
+  // Usa a data como seed para garantir que o mesmo dia sempre bloqueie as mesmas mesas
+  let seed = 0;
+  for (let i = 0; i < dia.length; i++) seed += dia.charCodeAt(i) * (i + 1);
+  // Quantidade aleatória entre 5 e 9
+  const qtd = 5 + (seed % 5); // 5 a 9
+  // Shuffle determinístico
+  const mesas = [...totalMesas];
+  for (let i = mesas.length - 1; i > 0; i--) {
+    const j = (seed + i * 31) % (i + 1);
+    [mesas[i], mesas[j]] = [mesas[j], mesas[i]];
+  }
+  return mesas.slice(0, qtd);
+}
 
 function loadReservas(): Reserva[] {
   try {
@@ -109,6 +123,8 @@ function diffDays(fromDate: string, toDate: string): number {
 }
 
 export default function Reservas() {
+  // Popup de seleção de data
+  const [showDateModal, setShowDateModal] = useState(() => !localStorage.getItem("dataReserva"));
   const navigate = useNavigate();
   const { notify } = useNotifications();
   const [loading, setLoading] = useState(true);
@@ -120,7 +136,7 @@ export default function Reservas() {
   const [cpfInput, setCpfInput] = useState("");
   const [nomeInput, setNomeInput] = useState("");
   const [cpfError, setCpfError] = useState("");
-  const [dataReserva, setDataReserva] = useState("");
+  const [dataReserva, setDataReserva] = useState(() => localStorage.getItem("dataReserva") || "");
   const [showReceipt, setShowReceipt] = useState<Reserva | null>(null);
   const [lastReserva, setLastReserva] = useState<Reserva | null>(() => {
     const saved = localStorage.getItem("ultima_reserva_confirmada_v2");
@@ -138,12 +154,22 @@ export default function Reservas() {
   const reservaConfirmada = !!lastReserva;
 
   const reservadasUsuario = getMesasReservadas(reservas);
-  const reservadas = [...new Set([...MESAS_BLOQUEADAS, ...reservadasUsuario])];
+  // Mesas bloqueadas aleatórias por dia (sempre recalcula com base em dataReserva e mesas)
+  const mesasBloqueadas = getMesasBloqueadas(dataReserva || todayIsoDate(), mesas.map(m => m.id));
+  const reservadas = [...new Set([...mesasBloqueadas, ...reservadasUsuario])];
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1200);
     return () => clearTimeout(timer);
   }, []);
+
+
+  // Sempre salva a data selecionada no localStorage
+  useEffect(() => {
+    if (dataReserva) {
+      localStorage.setItem("dataReserva", dataReserva);
+    }
+  }, [dataReserva]);
 
   useEffect(() => {
     if (avisoInicialRef.current) return;
@@ -448,6 +474,113 @@ export default function Reservas() {
         position: "relative",
       }}
     >
+      {/* Modal de seleção de data */}
+      {showDateModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(10,37,64,0.90)",
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            animation: "fadeIn 0.3s"
+          }}
+        >
+          <div
+            style={{
+              background: "linear-gradient(135deg, #0a2540 0%, #163d5c 60%, #1a6fa8 100%)",
+              borderRadius: 28,
+              padding: "44px 38px 36px",
+              minWidth: 340,
+              maxWidth: "92vw",
+              boxShadow: "0 32px 80px rgba(0,0,0,0.55)",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 22,
+              border: "1.5px solid #4db3d8"
+            }}
+          >
+            <h2 style={{
+              color: "#e8f6ff",
+              fontFamily: "Cormorant Garamond, serif",
+              fontWeight: 700,
+              fontSize: "2rem",
+              margin: 0,
+              letterSpacing: "0.06em",
+              textShadow: "0 4px 16px rgba(10,37,64,0.3)"
+            }}>
+              Escolha a data da reserva
+            </h2>
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+              width: "100%"
+            }}>
+              <label style={{
+                color: "#7fb8d4",
+                fontWeight: 600,
+                fontSize: "1rem",
+                marginBottom: 4,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase"
+              }}>
+                Data da reserva
+              </label>
+              <input
+                type="date"
+                value={dataReserva}
+                min={todayIsoDate()}
+                onChange={e => setDataReserva(e.target.value)}
+                style={{
+                  fontSize: "1.15rem",
+                  padding: "12px 18px",
+                  borderRadius: 10,
+                  border: "2px solid #4db3d8",
+                  background: "#e8f6ff",
+                  color: "#0b1e33",
+                  outline: "none",
+                  fontFamily: "Manrope, sans-serif",
+                  fontWeight: 700,
+                  boxShadow: "0 2px 12px rgba(77,179,216,0.07)",
+                  marginBottom: 8,
+                  marginTop: 2,
+                  width: 220,
+                  textAlign: "center"
+                }}
+              />
+            </div>
+            <button
+              style={{
+                background: dataReserva ? "linear-gradient(90deg, #1a6fa8 0%, #4db3d8 100%)" : "#4db3d8",
+                color: "#fff",
+                border: "none",
+                borderRadius: 12,
+                fontWeight: 700,
+                fontSize: "1.15rem",
+                padding: "13px 38px",
+                cursor: dataReserva ? "pointer" : "not-allowed",
+                opacity: dataReserva ? 1 : 0.7,
+                marginTop: 10,
+                boxShadow: dataReserva ? "0 4px 18px rgba(77,179,216,0.13)" : "none",
+                letterSpacing: "0.04em",
+                transition: "all 0.2s"
+              }}
+              disabled={!dataReserva}
+              onClick={() => setShowDateModal(false)}
+            >
+              Confirmar Data
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Botão para trocar data, agora dentro do menu lateral */}
+
       {/* Loading */}
       {loading && (
         <div
@@ -562,7 +695,7 @@ export default function Reservas() {
           />
         </div>
 
-        {/* Title */}
+        {/* Title e botão de trocar data */}
         <div style={{ textAlign: "center", padding: "0 1.4rem 1.2rem" }}>
           <h1
             style={{
@@ -588,6 +721,28 @@ export default function Reservas() {
           <p style={{ color: "#7fb8d4", fontSize: "0.8rem", margin: "8px 0 0", letterSpacing: "0.04em" }}>
             Selecione as mesas no mapa
           </p>
+          {/* Botão de trocar data */}
+          {!showDateModal && dataReserva && (
+            <button
+              onClick={() => setShowDateModal(true)}
+              style={{
+                marginTop: 18,
+                background: "#0b1e33",
+                color: "#7fb8d4",
+                border: "2px solid #4db3d8",
+                borderRadius: 10,
+                fontWeight: 700,
+                fontSize: "1rem",
+                padding: "9px 22px",
+                boxShadow: "0 4px 18px rgba(77,179,216,0.10)",
+                cursor: "pointer",
+                letterSpacing: "0.04em",
+                transition: "all 0.2s"
+              }}
+            >
+              Trocar data
+            </button>
+          )}
         </div>
 
         {/* Legenda */}
@@ -716,7 +871,7 @@ export default function Reservas() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleClickMesa(id)}
+                        onClick={() => setSelecionadas([])}
                         style={{
                           background: "none",
                           border: "none",
