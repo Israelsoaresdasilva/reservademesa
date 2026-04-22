@@ -2,6 +2,14 @@
 
 Este projeto é um sistema moderno para reservas de restaurante com visualização de mesas, cardápio digital e navegação SPA, desenvolvido em React + TypeScript.
 
+## Desenvolvidos por
+
+Keila da cunha rezende - 06015370
+Israel Soares da Silva - 06010016
+Matheus Prudente Silva - 06003440
+Savio Emmanuel Silva da Conceição - 06009864
+Patrick Quintino - 06016924
+
 ## Como rodar o projeto
 
 1. Instale as dependências:
