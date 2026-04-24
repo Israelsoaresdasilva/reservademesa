@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cardápio Ocean Blue</title>
     <style>
+      html { scroll-behavior: smooth; }
       body {
         display: flex;
         flex-direction: column;
@@ -17,31 +18,73 @@
         );
         min-height: 100vh;
         font-family: Arial, sans-serif;
+        margin: 0;
       }
       header {
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
       }
       .logo {
         width: 180px;
         margin: 20px auto 10px auto;
       }
-      h1 {
-        margin: 0;
-        color: #8babe6;
+      h1 { margin: 0; color: #8babe6; }
+      h2.subtitle { margin: 0 0 20px 0; color: #217dbb; }
+
+      .nav-buttons {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin: 10px 0 30px 0;
       }
-      h2 {
-        margin: 0 0 20px 0;
-        color: #217dbb;
+      .nav-buttons a {
+        background: #217dbb;
+        color: #fff;
+        text-decoration: none;
+        padding: 12px 28px;
+        border-radius: 999px;
+        font-weight: bold;
+        font-size: 1.05em;
+        box-shadow: 0 6px 16px rgba(33, 125, 187, 0.35);
+        transition: transform 0.25s, box-shadow 0.25s, background 0.25s;
       }
+      .nav-buttons a:hover {
+        transform: scale(1.05);
+        background: #1a6399;
+        box-shadow: 0 10px 22px rgba(33, 125, 187, 0.5);
+      }
+
+      .menu-group {
+        width: 100%;
+        max-width: 1180px;
+        padding: 30px 20px;
+        margin-bottom: 30px;
+        scroll-margin-top: 20px;
+      }
+      .menu-group > h2.group-title {
+        text-align: center;
+        font-size: 2.2em;
+        color: #ffffff;
+        background: #217dbb;
+        padding: 14px 30px;
+        border-radius: 14px;
+        margin: 0 auto 30px auto;
+        max-width: 500px;
+        letter-spacing: 2px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      }
+
       .menu-section {
         width: 100%;
-        max-width: 1100px;
         margin-bottom: 40px;
       }
       .menu-section h3 {
         color: #217dbb;
         margin-bottom: 15px;
+        font-size: 1.5em;
+        border-bottom: 2px solid #9dd1f3;
+        padding-bottom: 6px;
       }
       .cards-container {
         display: flex;
@@ -67,171 +110,212 @@
         width: 100%;
         height: 180px;
         object-fit: cover;
+        display: block;
       }
-      .details {
-        padding: 18px;
-      }
-      .details h4 {
-        margin: 10px 0 5px 0;
-        color: #217dbb;
-      }
-      .details span {
-        color: #888;
-        font-size: 0.95em;
-      }
+      .details { padding: 18px; }
+      .details h4 { margin: 10px 0 5px 0; color: #217dbb; }
+      .details span { color: #888; font-size: 0.95em; }
+      .details p { color: #333; line-height: 1.4; }
     </style>
   </head>
   <body>
     <header>
       <img src="Ocean Blue.png" alt="Logo Ocean Blue" class="logo" />
       <h1>Ocean Blue</h1>
-      <h2>Cardápio</h2>
+      <h2 class="subtitle">Cardápio</h2>
+      <nav class="nav-buttons">
+        <a href="#pratos">🍽 Pratos</a>
+        <a href="#bebidas">🥤 Bebidas</a>
+      </nav>
     </header>
 
-    <!-- Entradas -->
-    <div class="menu-section">
-      <h3>Entradas</h3>
-      <div class="cards-container">
-        <div class="card">
-          <div class="img8x">
-            <img src="Bolinho-de-Bacalhau.jpg" alt="Bolinho de Bacalhau" />
-          </div>
-          <div class="details">
-            <h4>Bolinho de Bacalhau<br /><span>Clássico português</span></h4>
-            <p>
-              Bolinhos crocantes de bacalhau desfiado, batata e temperos
-              especiais. Servidos com molho tártaro.
-            </p>
-          </div>
-        </div>
-        <div class="card">
-          <div class="img8x">
-            <img
-              src="Ceviche de Peixe Branco.jpg"
-              alt="Ceviche de Peixe Branco"
-            />
-          </div>
-          <div class="details">
-            <h4>
-              Ceviche de Peixe Branco<br /><span>Refrescante e cítrico</span>
-            </h4>
-            <p>
-              Peixe branco marinado no limão, cebola roxa, coentro e pimenta
-              dedo-de-moça. Acompanha chips de batata-doce.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- ============== PRATOS ============== -->
+    <section id="pratos" class="menu-group">
+      <h2 class="group-title">PRATOS</h2>
 
-    <!-- Pratos Principais -->
-    <div class="menu-section">
-      <h3>Pratos Principais</h3>
-      <div class="cards-container">
-        <div class="card">
-          <div class="img8x">
-            <img src="Camarao-na-moranga.jpg" alt="Camarão na Moranga" />
+      <!-- Entradas -->
+      <div class="menu-section">
+        <h3>Entradas</h3>
+        <div class="cards-container">
+          <div class="card">
+            <div class="img8x">
+              <img src="Bolinho-de-Bacalhau.jpg" alt="Bolinho de Bacalhau" />
+            </div>
+            <div class="details">
+              <h4>Bolinho de Bacalhau<br /><span>Clássico português</span></h4>
+              <p>Bolinhos crocantes de bacalhau desfiado, batata e temperos especiais. Servidos com molho tártaro.</p>
+            </div>
           </div>
-          <div class="details">
-            <h4>
-              Camarão na Moranga<br /><span
-                >Camarões cremosos dentro de uma abóbora</span
-              >
-            </h4>
-            <p>
-              Tradicional prato brasileiro com camarões refogados em molho
-              cremoso, servido dentro de uma moranga assada. Acompanha arroz
-              branco.
-            </p>
-          </div>
-        </div>
-        <div class="card">
-          <div class="img8x">
-            <img src="Moqueca Baiana.jpg" alt="Moqueca Baiana" />
-          </div>
-          <div class="details">
-            <h4>
-              Moqueca Baiana<br /><span>Peixe e camarão ao leite de coco</span>
-            </h4>
-            <p>
-              Peixe e camarão cozidos com pimentões, tomate, cebola, leite de
-              coco e azeite de dendê. Servido com arroz e farofa de dendê.
-            </p>
-          </div>
-        </div>
-        <div class="card">
-          <div class="img8x">
-            <img
-              src="Risoto de Frutos do Mar.jpg"
-              alt="Risoto de Frutos do Mar"
-            />
-          </div>
-          <div class="details">
-            <h4>
-              Risoto de Frutos do Mar<br /><span
-                >Arroz cremoso com frutos do mar</span
-              >
-            </h4>
-            <p>
-              Risoto preparado com arroz arbório, camarão, lula, polvo e
-              mexilhões, finalizado com vinho branco e ervas frescas.
-            </p>
+          <div class="card">
+            <div class="img8x">
+              <img src="Ceviche de Peixe Branco.jpg" alt="Ceviche de Peixe Branco" />
+            </div>
+            <div class="details">
+              <h4>Ceviche de Peixe Branco<br /><span>Refrescante e cítrico</span></h4>
+              <p>Peixe branco marinado no limão, cebola roxa, coentro e pimenta dedo-de-moça. Acompanha chips de batata-doce.</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Sobremesas -->
-    <div class="menu-section">
-      <h3>Sobremesas</h3>
-      <div class="cards-container">
-        <div class="card">
-          <div class="img8x">
-            <img src="Mousse de Maracujá.jpg" alt="Mousse de Maracujá" />
+      <!-- Pratos Principais -->
+      <div class="menu-section">
+        <h3>Pratos Principais</h3>
+        <div class="cards-container">
+          <div class="card">
+            <div class="img8x">
+              <img src="Camarao-na-moranga.jpg" alt="Camarão na Moranga" />
+            </div>
+            <div class="details">
+              <h4>Camarão na Moranga<br /><span>Camarões cremosos dentro de uma abóbora</span></h4>
+              <p>Tradicional prato brasileiro com camarões refogados em molho cremoso, servido dentro de uma moranga assada. Acompanha arroz branco.</p>
+            </div>
           </div>
-          <div class="details">
-            <h4>Mousse de Maracujá<br /><span>Leve e refrescante</span></h4>
-            <p>Mousse cremosa de maracujá com calda de frutas frescas.</p>
+          <div class="card">
+            <div class="img8x">
+              <img src="Moqueca Baiana.jpg" alt="Moqueca Baiana" />
+            </div>
+            <div class="details">
+              <h4>Moqueca Baiana<br /><span>Peixe e camarão ao leite de coco</span></h4>
+              <p>Peixe e camarão cozidos com pimentões, tomate, cebola, leite de coco e azeite de dendê. Servido com arroz e farofa de dendê.</p>
+            </div>
           </div>
-        </div>
-        <div class="card">
-          <div class="img8x">
-            <img src="Torta de Limão.jpg" alt="Torta de Limão" />
+          <div class="card">
+            <div class="img8x">
+              <img src="Risoto de Frutos do Mar.jpg" alt="Risoto de Frutos do Mar" />
+            </div>
+            <div class="details">
+              <h4>Risoto de Frutos do Mar<br /><span>Arroz cremoso com frutos do mar</span></h4>
+              <p>Risoto preparado com arroz arbório, camarão, lula, polvo e mexilhões, finalizado com vinho branco e ervas frescas.</p>
+            </div>
           </div>
-          <div class="details">
-            <h4>Torta de Limão<br /><span>Clássica e deliciosa</span></h4>
-            <p>Torta de limão com base crocante e cobertura de merengue.</p>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&w=800&q=80" alt="Polvo Grelhado ao Azeite" />
+            </div>
+            <div class="details">
+              <h4>Polvo Grelhado ao Azeite<br /><span>Maciez e sabor do mar</span></h4>
+              <p>Tentáculos de polvo grelhados na brasa, regados com azeite de ervas, servidos com batatas rústicas e tomatinhos confitados.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1626804475297-41608ea09aeb?auto=format&fit=crop&w=800&q=80" alt="Bobó de Camarão" />
+            </div>
+            <div class="details">
+              <h4>Bobó de Camarão<br /><span>Cremosidade nordestina</span></h4>
+              <p>Camarões em creme de mandioca com leite de coco e dendê, finalizado com coentro fresco. Acompanha arroz branco.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=800&q=80" alt="Filé de Robalo ao Molho de Maracujá" />
+            </div>
+            <div class="details">
+              <h4>Filé de Robalo ao Molho de Maracujá<br /><span>Equilíbrio doce e cítrico</span></h4>
+              <p>Filé de robalo selado, coberto com molho agridoce de maracujá, sobre purê de banana-da-terra.</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Bebidas -->
-    <div class="menu-section">
-      <h3>Bebidas</h3>
-      <div class="cards-container">
-        <div class="card">
-          <div class="img8x">
-            <img src="Caipirinha.jpg" alt="Caipirinha" />
+      <!-- Sobremesas -->
+      <div class="menu-section">
+        <h3>Sobremesas</h3>
+        <div class="cards-container">
+          <div class="card">
+            <div class="img8x">
+              <img src="Mousse de Maracujá.jpg" alt="Mousse de Maracujá" />
+            </div>
+            <div class="details">
+              <h4>Mousse de Maracujá<br /><span>Leve e refrescante</span></h4>
+              <p>Mousse cremosa de maracujá com calda de frutas frescas.</p>
+            </div>
           </div>
-          <div class="details">
-            <h4>Caipirinha<br /><span>Clássico brasileiro</span></h4>
-            <p>
-              Cachaça, limão, açúcar e gelo. Refrescante e perfeita para
-              acompanhar frutos do mar.
-            </p>
-          </div>
-        </div>
-        <div class="card">
-          <div class="img8x">
-            <img src="Suco Natural.jpg" alt="Suco Natural" />
-          </div>
-          <div class="details">
-            <h4>Suco Natural<br /><span>Diversos sabores</span></h4>
-            <p>Escolha entre laranja, abacaxi, maracujá ou limonada.</p>
+          <div class="card">
+            <div class="img8x">
+              <img src="Torta de Limão.jpg" alt="Torta de Limão" />
+            </div>
+            <div class="details">
+              <h4>Torta de Limão<br /><span>Clássica e deliciosa</span></h4>
+              <p>Torta de limão com base crocante e cobertura de merengue.</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- ============== BEBIDAS ============== -->
+    <section id="bebidas" class="menu-group">
+      <h2 class="group-title">BEBIDAS</h2>
+
+      <!-- Drinks / Coquetéis -->
+      <div class="menu-section">
+        <h3>Drinks &amp; Coquetéis</h3>
+        <div class="cards-container">
+          <div class="card">
+            <div class="img8x">
+              <img src="Caipirinha.jpg" alt="Caipirinha" />
+            </div>
+            <div class="details">
+              <h4>Caipirinha<br /><span>Clássico brasileiro</span></h4>
+              <p>Cachaça, limão, açúcar e gelo. Refrescante e perfeita para acompanhar frutos do mar.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1551538827-9c037cb4f32a?auto=format&fit=crop&w=800&q=80" alt="Mojito Tropical" />
+            </div>
+            <div class="details">
+              <h4>Mojito Tropical<br /><span>Refrescância cubana</span></h4>
+              <p>Rum, hortelã fresca, limão, açúcar e água com gás. Refrescância cubana com toque brasileiro.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=800&q=80" alt="Vinho Branco da Casa" />
+            </div>
+            <div class="details">
+              <h4>Vinho Branco da Casa (taça)<br /><span>Sauvignon Blanc seco</span></h4>
+              <p>Vinho branco seco e leve, harmonização perfeita com peixes e frutos do mar.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=800&q=80" alt="Cerveja Artesanal IPA" />
+            </div>
+            <div class="details">
+              <h4>Cerveja Artesanal IPA<br /><span>Lúpulo cítrico</span></h4>
+              <p>Cerveja artesanal de lúpulo cítrico, corpo médio e final levemente amargo. Servida bem gelada.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Não alcoólicas -->
+      <div class="menu-section">
+        <h3>Não Alcoólicas</h3>
+        <div class="cards-container">
+          <div class="card">
+            <div class="img8x">
+              <img src="Suco Natural.jpg" alt="Suco Natural" />
+            </div>
+            <div class="details">
+              <h4>Suco Natural<br /><span>Diversos sabores</span></h4>
+              <p>Escolha entre laranja, abacaxi, maracujá ou limonada.</p>
+            </div>
+          </div>
+          <div class="card">
+            <div class="img8x">
+              <img src="https://images.unsplash.com/photo-1536759808741-94b7d4af392c?auto=format&fit=crop&w=800&q=80" alt="Água de Coco Gelada" />
+            </div>
+            <div class="details">
+              <h4>Água de Coco Gelada<br /><span>Direto do coco verde</span></h4>
+              <p>Hidratante, levemente adocicada e servida bem gelada. Perfeita para um dia ensolarado.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   </body>
 </html>
