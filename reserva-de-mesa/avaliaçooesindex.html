@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reserva de Mesa — Ocean Blues</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ocean-deep: #042C53;
+    --ocean-mid: #185FA5;
+    --ocean-light: #85B7EB;
+    --ocean-pale: #E6F1FB;
+    --sand: #FAC775;
+    --sand-deep: #BA7517;
+    --coral: #D85A30;
+    --teal: #5DCAA5;
+    --white: #FAFAF8;
+    --border: rgba(24, 95, 165, 0.15);
+  }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--ocean-deep);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 10%, rgba(24,95,165,0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 90%, rgba(133,183,235,0.2) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 50% 50%, rgba(4,44,83,0.8) 0%, transparent 80%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
+
+  /* HEADER */
+  header { padding: 3rem 0 1rem; text-align: center; }
+  .logo-wave { display: flex; gap: 4px; align-items: flex-end; height: 20px; margin-bottom: 1rem; justify-content: center; }
+  .logo-wave span { display: block; width: 5px; background: var(--ocean-light); border-radius: 3px 3px 0 0; animation: wave-bar 1.5s ease-in-out infinite; }
+  .logo-wave span:nth-child(1) { height: 10px; animation-delay: 0s; }
+  .logo-wave span:nth-child(2) { height: 16px; animation-delay: 0.15s; }
+  .logo-wave span:nth-child(3) { height: 20px; animation-delay: 0.3s; }
+  .logo-wave span:nth-child(4) { height: 14px; animation-delay: 0.45s; }
+  .logo-wave span:nth-child(5) { height: 8px; animation-delay: 0.6s; }
+  @keyframes wave-bar { 0%,100% { transform: scaleY(1); opacity: 0.7; } 50% { transform: scaleY(0.5); opacity: 1; } }
+  .project-tag { font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: var(--ocean-light); background: rgba(133,183,235,0.12); border: 1px solid rgba(133,183,235,0.25); padding: 4px 14px; border-radius: 20px; margin-bottom: 1rem; display: inline-block; }
+  h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(3rem, 8vw, 5.5rem); font-weight: 300; letter-spacing: -0.02em; line-height: 1; color: var(--white); margin-bottom: 0.3rem; }
+  h1 em { font-style: italic; color: var(--sand); }
+  .tagline { font-size: 14px; color: rgba(133,183,235,0.8); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 0.75rem; margin-bottom: 2.5rem; }
+
+  /* RATING HERO */
+  .rating-hero { display: flex; align-items: center; justify-content: center; gap: 3rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(133,183,235,0.2); border-radius: 20px; padding: 2rem 3rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .big-score { text-align: center; }
+  .big-score .number { font-family: 'Cormorant Garamond', serif; font-size: 5rem; font-weight: 300; line-height: 1; color: var(--sand); }
+  .big-score .out-of { font-size: 13px; color: rgba(255,255,255,0.4); margin-top: 4px; letter-spacing: 0.05em; }
+  .stars-row { display: flex; gap: 4px; justify-content: center; margin: 8px 0 4px; }
+  .star { width: 18px; height: 18px; position: relative; }
+  .star svg { width: 100%; height: 100%; }
+  .big-score .stars-row .star svg { width: 22px; height: 22px; }
+  .rating-bars { flex: 1; min-width: 200px; max-width: 320px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-label { font-size: 12px; color: rgba(255,255,255,0.5); width: 40px; text-align: right; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--ocean-mid), var(--sand)); border-radius: 3px; transform-origin: left; animation: bar-grow 1.2s ease-out forwards; transform: scaleX(0); }
+  @keyframes bar-grow { to { transform: scaleX(1); } }
+  .bar-count { font-size: 11px; color: rgba(255,255,255,0.3); width: 20px; flex-shrink: 0; }
+  .stats-col { display: flex; flex-direction: column; gap: 1rem; text-align: center; }
+  .stat-item .stat-num { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 300; color: var(--white); line-height: 1; }
+  .stat-item .stat-label { font-size: 11px; color: rgba(255,255,255,0.4); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 3px; }
+
+  /* CATEGORY SCORES STRIP */
+  .cat-scores { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+  .cat-score-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(133,183,235,0.15); border-radius: 14px; padding: 1rem 1.1rem; text-align: center; transition: background 0.2s; }
+  .cat-score-card:hover { background: rgba(255,255,255,0.07); }
+  .cat-icon { font-size: 22px; margin-bottom: 6px; line-height: 1; }
+  .cat-name { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+  .cat-val { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; line-height: 1; }
+  .cat-mini-stars { display: flex; gap: 2px; justify-content: center; margin-top: 4px; }
+
+  /* FILTERS */
+  .filters-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 2rem; align-items: center; }
+  .filter-btn { background: rgba(255,255,255,0.06); border: 1px solid rgba(133,183,235,0.2); color: rgba(255,255,255,0.6); padding: 6px 16px; border-radius: 20px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+  .filter-btn:hover, .filter-btn.active { background: rgba(133,183,235,0.18); border-color: var(--ocean-light); color: var(--white); }
+  .write-btn { margin-left: auto; background: var(--sand); border: none; color: var(--ocean-deep); padding: 8px 20px; border-radius: 20px; font-size: 13px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .write-btn:hover { background: #FFD694; transform: translateY(-1px); }
+
+  /* REVIEWS GRID */
+  .reviews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 1.25rem; margin-bottom: 3rem; }
+  .review-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(133,183,235,0.15); border-radius: 16px; padding: 1.5rem; transition: all 0.3s ease; opacity: 0; transform: translateY(16px); animation: card-in 0.5s ease forwards; }
+  .review-card:hover { background: rgba(255,255,255,0.08); border-color: rgba(133,183,235,0.3); transform: translateY(-3px); }
+  @keyframes card-in { to { opacity: 1; transform: translateY(0); } }
+  .review-card:nth-child(1){animation-delay:.1s}.review-card:nth-child(2){animation-delay:.2s}.review-card:nth-child(3){animation-delay:.3s}.review-card:nth-child(4){animation-delay:.4s}.review-card:nth-child(5){animation-delay:.5s}.review-card:nth-child(6){animation-delay:.6s}
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1rem; }
+  .reviewer-info { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; flex-shrink: 0; }
+  .reviewer-name { font-size: 14px; font-weight: 500; color: var(--white); line-height: 1.2; }
+  .reviewer-meta { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+  .card-stars { display: flex; gap: 2px; }
+  .card-stars svg { width: 14px; height: 14px; }
+  .review-title { font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; font-weight: 400; color: var(--white); margin-bottom: 0.5rem; line-height: 1.3; }
+  .review-text { font-size: 13.5px; line-height: 1.7; color: rgba(255,255,255,0.6); }
+
+  /* CATEGORY MINI SCORES ON CARD */
+  .card-cats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.07); }
+  .card-cat-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .card-cat-icon { font-size: 14px; line-height: 1; }
+  .card-cat-label { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+  .card-cat-dots { display: flex; gap: 2px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.1); }
+  .dot.on { background: var(--sand); }
+  .dot.on.hi { background: var(--teal); }
+
+  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+  .tag-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; padding: 3px 9px; border-radius: 10px; font-weight: 500; }
+  .chip-food { background: rgba(133,183,235,0.15); color: var(--ocean-light); }
+  .chip-service { background: rgba(250,199,117,0.15); color: var(--sand); }
+  .chip-amb { background: rgba(216,90,48,0.15); color: #F0997B; }
+  .chip-vista { background: rgba(93,202,165,0.15); color: #5DCAA5; }
+  .chip-music { background: rgba(212,83,126,0.15); color: #ED93B1; }
+  .chip-drink { background: rgba(133,183,235,0.12); color: #B5D4F4; }
+  .helpful-btn { background: none; border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); padding: 4px 10px; border-radius: 10px; font-size: 11px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .helpful-btn:hover { border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.6); }
+  .helpful-btn.liked { border-color: var(--ocean-light); color: var(--ocean-light); }
+
+  /* FEATURED */
+  .review-card.featured { grid-column: span 2; border-color: rgba(250,199,117,0.3); background: rgba(250,199,117,0.05); position: relative; overflow: hidden; }
+  .review-card.featured::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--sand), transparent); }
+  .featured-badge { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--sand); background: rgba(250,199,117,0.12); border: 1px solid rgba(250,199,117,0.25); padding: 3px 10px; border-radius: 10px; margin-bottom: 0.75rem; display: inline-block; font-weight: 500; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(4,44,83,0.88); backdrop-filter: blur(8px); z-index: 100; align-items: center; justify-content: center; padding: 1rem; overflow-y: auto; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: #0a2d4a; border: 1px solid rgba(133,183,235,0.25); border-radius: 20px; padding: 2rem; width: 100%; max-width: 580px; animation: modal-in 0.3s ease; margin: auto; }
+  @keyframes modal-in { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+  .modal-box h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 300; margin-bottom: 0.25rem; color: var(--white); }
+  .modal-box p.sub { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 1.5rem; }
+  .form-group { margin-bottom: 1.1rem; }
+  .form-group label { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+  .form-group input, .form-group textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(133,183,235,0.2); border-radius: 10px; padding: 10px 14px; color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus, .form-group textarea:focus { border-color: var(--ocean-light); }
+  .form-group textarea { resize: vertical; min-height: 80px; }
+
+  /* STAR PICKER */
+  .star-picker { display: flex; gap: 6px; }
+  .star-picker .sp-star { width: 28px; height: 28px; cursor: pointer; transition: transform 0.15s; color: rgba(255,255,255,0.2); }
+  .star-picker .sp-star:hover, .star-picker .sp-star.on { color: var(--sand); transform: scale(1.15); }
+
+  /* CATEGORY SLIDERS */
+  .cats-section { margin-bottom: 1.2rem; }
+  .cats-section > label { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 10px; }
+  .cat-sliders-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+  .cat-slider-row { display: flex; flex-direction: column; gap: 4px; }
+  .cat-slider-header { display: flex; justify-content: space-between; align-items: center; }
+  .cat-slider-name { font-size: 12px; color: rgba(255,255,255,0.6); display: flex; align-items: center; gap: 5px; }
+  .cat-slider-name span { font-size: 14px; }
+  .cat-slider-val { font-size: 13px; font-weight: 500; color: var(--sand); min-width: 16px; text-align: right; }
+  input[type=range].cat-range { width: 100%; height: 4px; -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; cursor: pointer; }
+  input[type=range].cat-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--sand); cursor: pointer; }
+  input[type=range].cat-range::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--sand); cursor: pointer; border: none; }
+
+  /* SATISFACTION TOGGLE */
+  .satisfaction-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sat-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.5); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+  .sat-btn.yes.active { background: rgba(93,202,165,0.15); border-color: var(--teal); color: var(--teal); }
+  .sat-btn.no.active { background: rgba(216,90,48,0.15); border-color: var(--coral); color: #F0997B; }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem; }
+  .btn-cancel { background: none; border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.5); padding: 9px 20px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+  .btn-cancel:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.7); }
+  .btn-submit { background: var(--sand); border: none; color: var(--ocean-deep); padding: 9px 24px; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-submit:hover { background: #FFD694; }
+
+  /* SATISFACTION SUMMARY BADGE ON CARD */
+  .sat-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 3px 8px; border-radius: 8px; margin-top: 8px; }
+  .sat-badge.yes { background: rgba(93,202,165,0.12); color: var(--teal); }
+  .sat-badge.no { background: rgba(216,90,48,0.12); color: #F0997B; }
+
+  footer { text-align: center; padding: 2rem 0 3rem; border-top: 1px solid rgba(133,183,235,0.1); position: relative; z-index: 1; }
+  .footer-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 300; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+  footer small { font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  @media (max-width: 640px) {
+    .review-card.featured { grid-column: span 1; }
+    .rating-hero { gap: 1.5rem; padding: 1.5rem; }
+    .write-btn { margin-left: 0; }
+    .cat-sliders-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="logo-wave"><span></span><span></span><span></span><span></span><span></span></div>
+    <div class="project-tag">Reserva de Mesa</div>
+    <h1>Ocean <em>Blues</em></h1>
+    <p class="tagline">Frutos do mar · Gastronomia de autor · Rio de Janeiro</p>
+
+    <div class="rating-hero">
+      <div class="big-score">
+        <div class="number" id="avg-score">4.8</div>
+        <div class="stars-row" id="hero-stars"></div>
+        <div class="out-of">de 5.0 estrelas</div>
+      </div>
+      <div class="rating-bars" id="bar-chart"></div>
+      <div class="stats-col">
+        <div class="stat-item">
+          <div class="stat-num" id="total-count">0</div>
+          <div class="stat-label">Avaliações</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-num" id="rec-pct">96%</div>
+          <div class="stat-label">Recomendam</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CATEGORY AVERAGES -->
+    <div class="cat-scores" id="cat-scores"></div>
+  </header>
+
+  <div class="filters-bar">
+    <button class="filter-btn active" data-filter="all">Todas</button>
+    <button class="filter-btn" data-filter="5">★ 5 estrelas</button>
+    <button class="filter-btn" data-filter="4">★ 4 estrelas</button>
+    <button class="filter-btn" data-filter="3">★ 3 estrelas</button>
+    <button class="filter-btn" data-filter="sat">Satisfeitos</button>
+    <button class="write-btn" id="open-modal">✦ Escrever avaliação</button>
+  </div>
+
+  <div class="reviews-grid" id="reviews-grid"></div>
+</div>
+
+<footer>
+  <div class="footer-logo">Ocean Blues</div>
+  <small>Reserva de Mesa &copy; 2025 · Todos os direitos reservados</small>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <h2>Sua avaliação</h2>
+    <p class="sub">Conte-nos sobre sua experiência no Ocean Blues</p>
+
+    <div class="form-group">
+      <label>Nota geral</label>
+      <div class="star-picker" id="star-picker">
+        <svg class="sp-star" data-val="1" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        <svg class="sp-star" data-val="2" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        <svg class="sp-star" data-val="3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        <svg class="sp-star" data-val="4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+        <svg class="sp-star" data-val="5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      </div>
+    </div>
+
+    <!-- CATEGORY SLIDERS -->
+    <div class="cats-section">
+      <label>Avalie cada item (1 a 5)</label>
+      <div class="cat-sliders-grid">
+        <div class="cat-slider-row">
+          <div class="cat-slider-header">
+            <div class="cat-slider-name"><span>🪑</span> Vaga / Mesa</div>
+            <div class="cat-slider-val" id="val-vaga">3</div>
+          </div>
+          <input type="range" class="cat-range" id="sl-vaga" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="cat-slider-row">
+          <div class="cat-slider-header">
+            <div class="cat-slider-name"><span>❄️</span> Ar condicionado</div>
+            <div class="cat-slider-val" id="val-ar">3</div>
+          </div>
+          <input type="range" class="cat-range" id="sl-ar" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="cat-slider-row">
+          <div class="cat-slider-header">
+            <div class="cat-slider-name"><span>🍽️</span> Comida</div>
+            <div class="cat-slider-val" id="val-comida">3</div>
+          </div>
+          <input type="range" class="cat-range" id="sl-comida" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="cat-slider-row">
+          <div class="cat-slider-header">
+            <div class="cat-slider-name"><span>🎵</span> Música</div>
+            <div class="cat-slider-val" id="val-musica">3</div>
+          </div>
+          <input type="range" class="cat-range" id="sl-musica" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="cat-slider-row">
+          <div class="cat-slider-header">
+            <div class="cat-slider-name"><span>🍹</span> Bebidas</div>
+            <div class="cat-slider-val" id="val-bebida">3</div>
+          </div>
+          <input type="range" class="cat-range" id="sl-bebida" min="1" max="5" value="3" step="1">
+        </div>
+        <div class="cat-slider-row">
+          <div class="cat-slider-header">
+            <div class="cat-slider-name"><span>⏱️</span> Atendimento</div>
+            <div class="cat-slider-val" id="val-atend">3</div>
+          </div>
+          <input type="range" class="cat-range" id="sl-atend" min="1" max="5" value="3" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Ficou satisfeito com a experiência?</label>
+      <div class="satisfaction-row">
+        <button class="sat-btn yes" id="sat-yes">✔ Sim, recomendo</button>
+        <button class="sat-btn no" id="sat-no">✖ Não recomendo</button>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Seu nome</label>
+      <input type="text" id="input-name" placeholder="Ex: Maria S." />
+    </div>
+    <div class="form-group">
+      <label>Título da avaliação</label>
+      <input type="text" id="input-title" placeholder="Ex: Uma experiência inesquecível" />
+    </div>
+    <div class="form-group">
+      <label>Sua experiência</label>
+      <textarea id="input-text" placeholder="Conte o que você mais gostou..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" id="close-modal">Cancelar</button>
+      <button class="btn-submit" id="submit-review">Publicar avaliação</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STAR_SVG = (filled, size=14) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${filled?'#FAC775':'none'}" stroke="${filled?'#FAC775':'rgba(255,255,255,0.2)'}" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>`;
+
+function renderStars(rating, size=14) {
+  let h = '';
+  for (let i=1;i<=5;i++) h += `<span class="star">${STAR_SVG(rating>=i, size)}</span>`;
+  return h;
+}
+
+function miniDots(val) {
+  let h = '<div class="card-cat-dots">';
+  for (let i=1;i<=5;i++) h += `<div class="dot${i<=val?' on'+(val>=4?' hi':''):''}"></div>`;
+  return h + '</div>';
+}
+
+const CAT_DEFS = [
+  { key: 'vaga',   icon: '🪑', label: 'Vaga' },
+  { key: 'ar',     icon: '❄️', label: 'Ar-cond.' },
+  { key: 'comida', icon: '🍽️', label: 'Comida' },
+  { key: 'musica', icon: '🎵', label: 'Música' },
+  { key: 'bebida', icon: '🍹', label: 'Bebidas' },
+  { key: 'atend',  icon: '⏱️', label: 'Atendimento' },
+];
+
+const avatarColors = [
+  {bg:'rgba(24,95,165,0.3)',color:'#85B7EB'},
+  {bg:'rgba(250,199,117,0.2)',color:'#FAC775'},
+  {bg:'rgba(216,90,48,0.2)',color:'#F0997B'},
+  {bg:'rgba(93,202,165,0.2)',color:'#5DCAA5'},
+  {bg:'rgba(133,183,235,0.2)',color:'#B5D4F4'},
+  {bg:'rgba(212,83,126,0.2)',color:'#ED93B1'},
+];
+
+let reviewsData = [
+  {
+    id:1, name:'Ana Beatriz M.', initials:'AB', rating:5, stars:5, date:'Maio 2025',
+    title:'O melhor fruto do mar do Rio',
+    text:'Uma experiência absolutamente extraordinária. O robalo ao molho de maracujá derreteu na boca e a vista para a Baía de Guanabara ao entardecer foi de tirar o fôlego.',
+    cats:{vaga:5,ar:4,comida:5,musica:4,bebida:5,atend:5}, satisfied:true, featured:true, likes:34,
+  },
+  {
+    id:2, name:'Carlos H. R.', initials:'CH', rating:5, stars:5, date:'Maio 2025',
+    title:'Serviço impecável, voltarei sempre',
+    text:'Trouxe minha esposa para comemorar nosso aniversário. A equipe nos surpreendeu com uma decoração especial na mesa. A lagosta grelhada estava perfeita.',
+    cats:{vaga:5,ar:5,comida:5,musica:3,bebida:4,atend:5}, satisfied:true, featured:false, likes:21,
+  },
+  {
+    id:3, name:'Fernanda S.', initials:'FS', rating:4, stars:4, date:'Abril 2025',
+    title:'Ambiente sofisticado e aconchegante',
+    text:'Fui em uma quinta-feira à noite e fiquei encantada com a decoração. A camarão na manteiga de ervas estava incrível. Só achei o ar-condicionado um pouco frio demais.',
+    cats:{vaga:4,ar:2,comida:5,musica:4,bebida:4,atend:3}, satisfied:true, featured:false, likes:15,
+  },
+  {
+    id:4, name:'Roberto A.', initials:'RA', rating:5, stars:5, date:'Abril 2025',
+    title:'Vista para o mar é espetacular',
+    text:'Mesa na varanda ao pôr do sol — não existe experiência mais bonita no Rio. O peixe do dia estava fresquíssimo e o atendimento foi muito atencioso do início ao fim.',
+    cats:{vaga:5,ar:4,comida:5,musica:5,bebida:5,atend:5}, satisfied:true, featured:false, likes:28,
+  },
+  {
+    id:5, name:'Juliana P.', initials:'JP', rating:5, stars:5, date:'Março 2025',
+    title:'Gastronomia de nível internacional',
+    text:'Morei em Lisboa por cinco anos e comi em restaurantes Michelin. O Ocean Blues está no mesmo patamar. O polvo grelhado com purê de batata-doce foi uma revelação.',
+    cats:{vaga:4,ar:4,comida:5,musica:4,bebida:5,atend:4}, satisfied:true, featured:false, likes:42,
+  },
+  {
+    id:6, name:'Marcelo T.', initials:'MT', rating:4, stars:4, date:'Março 2025',
+    title:'Ótima opção para jantares especiais',
+    text:'Reserva fácil pelo app, chegamos no horário marcado. A carta de vinhos é muito bem curada. A música estava um pouco alta para conversar.',
+    cats:{vaga:3,ar:4,comida:4,musica:2,bebida:5,atend:4}, satisfied:true, featured:false, likes:9,
+  },
+];
+
+let currentFilter = 'all';
+let selectedStars = 0;
+let satisfaction = null;
+
+function catAvg(key) {
+  const vals = reviewsData.map(r => r.cats ? r.cats[key] : 3).filter(Boolean);
+  return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+}
+
+function renderCatScores() {
+  const el = document.getElementById('cat-scores');
+  el.innerHTML = CAT_DEFS.map(c => {
+    const avg = catAvg(c.key);
+    const color = avg >= 4.5 ? '#5DCAA5' : avg >= 3.5 ? '#FAC775' : '#F0997B';
+    return `<div class="cat-score-card">
+      <div class="cat-icon">${c.icon}</div>
+      <div class="cat-name">${c.label}</div>
+      <div class="cat-val" style="color:${color}">${avg.toFixed(1)}</div>
+      <div class="cat-mini-stars">${renderStars(avg, 11)}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBarChart() {
+  const counts = [0,0,0,0,0];
+  reviewsData.forEach(r => counts[r.stars-1]++);
+  const max = Math.max(...counts)||1;
+  document.getElementById('bar-chart').innerHTML = [5,4,3,2,1].map(s => {
+    const pct = (counts[s-1]/max*100).toFixed(0);
+    return `<div class="bar-row">
+      <span class="bar-label">${s} ★</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;animation-delay:${(5-s)*0.1}s"></div></div>
+      <span class="bar-count">${counts[s-1]}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderHeroStars() {
+  const avg = reviewsData.reduce((s,r)=>s+r.rating,0)/reviewsData.length;
+  document.getElementById('avg-score').textContent = avg.toFixed(1);
+  document.getElementById('hero-stars').innerHTML = renderStars(avg, 22);
+  document.getElementById('total-count').textContent = reviewsData.length;
+  const satPct = Math.round(reviewsData.filter(r=>r.satisfied).length/reviewsData.length*100);
+  document.getElementById('rec-pct').textContent = satPct+'%';
+}
+
+function renderReviews() {
+  const grid = document.getElementById('reviews-grid');
+  const filtered = reviewsData.filter(r => {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === '5') return r.stars === 5;
+    if (currentFilter === '4') return r.stars === 4;
+    if (currentFilter === '3') return r.stars === 3;
+    if (currentFilter === 'sat') return r.satisfied;
+    return true;
+  });
+
+  grid.innerHTML = filtered.map((r,i) => {
+    const color = avatarColors[i % avatarColors.length];
+    const catsHtml = r.cats ? `<div class="card-cats">
+      ${CAT_DEFS.map(c=>`<div class="card-cat-item">
+        <div class="card-cat-icon">${c.icon}</div>
+        ${miniDots(r.cats[c.key]||0)}
+        <div class="card-cat-label">${c.label}</div>
+      </div>`).join('')}
+    </div>` : '';
+    const satBadge = r.satisfied !== undefined
+      ? `<div class="sat-badge ${r.satisfied?'yes':'no'}">${r.satisfied?'✔ Recomenda':'✖ Não recomenda'}</div>`
+      : '';
+
+    return `<div class="review-card ${r.featured?'featured':''}" data-id="${r.id}">
+      ${r.featured ? '<span class="featured-badge">✦ Avaliação em destaque</span>' : ''}
+      <div class="card-header">
+        <div class="reviewer-info">
+          <div class="avatar" style="background:${color.bg};color:${color.color}">${r.initials}</div>
+          <div>
+            <div class="reviewer-name">${r.name}</div>
+            <div class="reviewer-meta">${r.date}</div>
+          </div>
+        </div>
+        <div class="card-stars">${renderStars(r.rating)}</div>
+      </div>
+      <div class="review-title">${r.title}</div>
+      <p class="review-text">${r.text}</p>
+      ${satBadge}
+      ${catsHtml}
+      <div class="card-footer" style="margin-top:0.75rem">
+        <div></div>
+        <button class="helpful-btn ${r._liked?'liked':''}" onclick="toggleLike(this,${r.id})">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>
+          ${r.likes}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleLike(btn, id) {
+  const r = reviewsData.find(x=>x.id===id);
+  if (!r) return;
+  r._liked = !r._liked;
+  r.likes += r._liked ? 1 : -1;
+  btn.classList.toggle('liked', r._liked);
+  btn.querySelector('svg').nextSibling ? null : null;
+  btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg> ${r.likes}`;
+  if(r._liked) btn.classList.add('liked'); else btn.classList.remove('liked');
+}
+
+function renderAll() { renderHeroStars(); renderBarChart(); renderCatScores(); renderReviews(); }
+
+// Filters
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderReviews();
+  });
+});
+
+// Modal open/close
+document.getElementById('open-modal').addEventListener('click', () => document.getElementById('modal').classList.add('open'));
+document.getElementById('close-modal').addEventListener('click', () => document.getElementById('modal').classList.remove('open'));
+document.getElementById('modal').addEventListener('click', e => { if(e.target===e.currentTarget) e.currentTarget.classList.remove('open'); });
+
+// Star picker
+const spStars = document.querySelectorAll('.sp-star');
+spStars.forEach(s => {
+  s.addEventListener('click', () => {
+    selectedStars = parseInt(s.dataset.val);
+    spStars.forEach(st => st.classList.toggle('on', parseInt(st.dataset.val)<=selectedStars));
+  });
+  s.addEventListener('mouseenter', () => {
+    const hov = parseInt(s.dataset.val);
+    spStars.forEach(st => st.classList.toggle('on', parseInt(st.dataset.val)<=hov));
+  });
+});
+document.getElementById('star-picker').addEventListener('mouseleave', () => {
+  spStars.forEach(st => st.classList.toggle('on', parseInt(st.dataset.val)<=selectedStars));
+});
+
+// Sliders live update
+['vaga','ar','comida','musica','bebida','atend'].forEach(key => {
+  const sl = document.getElementById('sl-'+key);
+  const vl = document.getElementById('val-'+key);
+  sl.addEventListener('input', () => { vl.textContent = sl.value; });
+});
+
+// Satisfaction buttons
+document.getElementById('sat-yes').addEventListener('click', () => {
+  satisfaction = true;
+  document.getElementById('sat-yes').classList.add('active');
+  document.getElementById('sat-no').classList.remove('active');
+});
+document.getElementById('sat-no').addEventListener('click', () => {
+  satisfaction = false;
+  document.getElementById('sat-no').classList.add('active');
+  document.getElementById('sat-yes').classList.remove('active');
+});
+
+// Submit
+document.getElementById('submit-review').addEventListener('click', () => {
+  const name = document.getElementById('input-name').value.trim();
+  const title = document.getElementById('input-title').value.trim();
+  const text = document.getElementById('input-text').value.trim();
+  if (!name || !title || !text || selectedStars === 0 || satisfaction === null) {
+    alert('Preencha todos os campos, selecione a nota e indique se recomenda.');
+    return;
+  }
+  const cats = {};
+  ['vaga','ar','comida','musica','bebida','atend'].forEach(k => {
+    cats[k] = parseInt(document.getElementById('sl-'+k).value);
+  });
+  const initials = name.split(' ').slice(0,2).map(w=>w[0].toUpperCase()).join('');
+  reviewsData.unshift({
+    id: Date.now(), name, initials, rating: selectedStars, stars: selectedStars,
+    date: 'Agora', title, text, cats, satisfied: satisfaction, featured: false, likes: 0,
+  });
+  // reset
+  document.getElementById('modal').classList.remove('open');
+  ['input-name','input-title','input-text'].forEach(id => document.getElementById(id).value='');
+  ['vaga','ar','comida','musica','bebida','atend'].forEach(k => {
+    document.getElementById('sl-'+k).value = 3;
+    document.getElementById('val-'+k).textContent = 3;
+  });
+  selectedStars = 0; satisfaction = null;
+  spStars.forEach(s=>s.classList.remove('on'));
+  document.getElementById('sat-yes').classList.remove('active');
+  document.getElementById('sat-no').classList.remove('active');
+  renderAll();
+});
+
+renderAll();
+</script>
+</body>
+</html>
