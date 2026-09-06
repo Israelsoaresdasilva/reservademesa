@@ -25,18 +25,6 @@
   position: relative;
 }
 
-.avaliacoes-container::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(24,95,165,0.35) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 90%, rgba(133,183,235,0.2) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 60% at 50% 50%, rgba(4,44,83,0.8) 0%, transparent 80%);
-  pointer-events: none;
-  z-index: 0;
-}
-
 .container {
   max-width: 1100px;
   margin: 0 auto;

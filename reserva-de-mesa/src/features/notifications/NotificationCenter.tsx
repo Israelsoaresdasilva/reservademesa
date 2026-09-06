@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useLocation } from "react-router-dom";
 import { useNotifications, type NotificationItem } from "./NotificationProvider";
 import "./notifications.css";
 
@@ -44,8 +43,6 @@ function NotificationCard({
 
 export function NotificationCenter() {
   const [open, setOpen] = useState(false);
-  const { pathname } = useLocation();
-  const isHome = pathname === "/";
   const [homeStyle, setHomeStyle] = useState<CSSProperties>({});
   const {
     notifications,
@@ -62,8 +59,6 @@ export function NotificationCenter() {
   }, [open, markAllAsRead]);
 
   useEffect(() => {
-    if (!isHome) return;
-
     const triggerSize = 46;
     const gap = 10;
 
@@ -93,16 +88,13 @@ export function NotificationCenter() {
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [isHome]);
+  }, []);
 
-  const sectionStyle = useMemo(
-    () => (isHome ? homeStyle : undefined),
-    [isHome, homeStyle]
-  );
+  const sectionStyle = useMemo(() => homeStyle, [homeStyle]);
 
   return (
     <section
-      className={`notification-center${isHome ? " notification-center--home" : ""}`}
+      className="notification-center notification-center--home"
       style={sectionStyle}
     >
       <button

@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../../features/notifications";
 
 interface Mesa {
@@ -125,8 +124,13 @@ function diffDays(fromDate: string, toDate: string): number {
 export default function Reservas() {
   // Popup de seleção de data
   const [showDateModal, setShowDateModal] = useState(() => !localStorage.getItem("dataReserva"));
-  const navigate = useNavigate();
   const { notify } = useNotifications();
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
   const [loading, setLoading] = useState(true);
   const mesas = loadCalibratedMesas();
   const [reservas, setReservas] = useState<Reserva[]>(loadReservas);
@@ -639,7 +643,7 @@ export default function Reservas() {
           }}
         >
           <button
-            onClick={() => navigate("/")}
+            onClick={() => scrollToSection("top")}
             style={{
               background: "none",
               border: "none",

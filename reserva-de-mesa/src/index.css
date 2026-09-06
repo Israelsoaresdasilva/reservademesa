@@ -13,5 +13,10 @@ body,
 
 body {
 	font-family: 'Manrope', sans-serif;
-	background: #110d0b;
+	background: #f7fbff;
+	color: #0a2540;
+}
+
+#root {
+	background: #f7fbff;
 }

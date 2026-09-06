@@ -2,12 +2,13 @@
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 12000;
+  z-index: 900;
 }
 
 .notification-center--home {
   top: 16px;
   right: 16px;
+  z-index: 900;
 }
 
 .notification-center__trigger {
