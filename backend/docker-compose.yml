@@ -1,0 +1,30 @@
+# Blue backend — infraestrutura mínima de desenvolvimento local: somente PostgreSQL.
+# (Não adicionar Redis/Celery/RabbitMQ etc. — fora do escopo do MVP; ver docs/ROADMAP.md.)
+#
+# Uso (a partir de backend/):
+#   docker compose up -d
+#   # criar .env a partir de .env.example e rodar: alembic upgrade head; uvicorn app.main:app --reload
+#
+# Observação: o ambiente de desenvolvimento atual não possui Docker/PostgreSQL instalados;
+# este arquivo documenta o fluxo local e é opcional nesta fase.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blue
+      POSTGRES_USER: blue
+      POSTGRES_PASSWORD: blue
+    ports:
+      - "5432:5432"
+    volumes:
+      - blue_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U blue -d blue"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  blue_pgdata:
