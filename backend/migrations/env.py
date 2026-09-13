@@ -22,6 +22,8 @@ if str(BASE_DIR) not in sys.path:
 from app.core.config import settings  # noqa: E402
 from app.core.database import Base  # noqa: E402
 import app.modules.users.model  # noqa: E402, F401  # registra `users` no metadata
+import app.modules.restaurants.model  # noqa: E402, F401  # registra restaurante/tables/capacity
+import app.modules.reservations.model  # noqa: E402, F401  # registra reservations/reservation_tables
 
 config = context.config
 

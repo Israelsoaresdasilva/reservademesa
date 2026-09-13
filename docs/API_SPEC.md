@@ -1,7 +1,7 @@
 # Blue — API Specification v1.0
 
-> **Status:** `[PLANNED]` — especificação proposta para o backend. **Não existe ainda** nenhum endpoint (estado atual = dados client-side; ver `ARCHITECTURE.md`).
-> **Fonte funcional:** [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) e [DOMAIN_SPEC.md](./DOMAIN_SPEC.md).
+> **Status:** a fundação do backend (`CURRENT — Backend Foundation`) e a **Fase 3 — Restaurante & Reservas** (`CURRENT`) já existem (ver §1); os grupos `/menu`, `/preorders`, `/reviews`, `/events` e `/notifications` permanecem `[PLANNED]`.
+> **Fonte funcional:** [PRODUCT_SPEC.md](./PRODUCT_SPEC.md) e [DOMAIN_SPEC.md](./DOMAIN_SPEC.md). Decisões de implementação da Fase 3: ADR-017 (`DECISIONS.md`).
 
 ## Convenções de estado
 
@@ -13,7 +13,7 @@
 
 ## Índice
 
-1. [Estado atual (CURRENT)](#1-estado-atual-current)
+1. [Estado atual (CURRENT — Backend Foundation)](#1-estado-atual-current--backend-foundation)
 2. [Principios gerais](#2-principios-generais)
 3. [Autenticação e autorização](#3-autenticação-e-autorização)
 4. [Grupo /auth](#4-grupo-auth)
@@ -30,13 +30,48 @@
 
 ---
 
-## 1. Estado atual (CURRENT)
+## 1. Estado atual (CURRENT — Backend Foundation)
 
-```
-CURRENT: NÃO EXISTE API.
-```
+A fundação do backend (Fase 2 — Backend Foundation) já existe. Endpoints **implementados**:
 
-O frontend atual funciona **sem backend**: dados simulados, estado em memória e `localStorage`. Nenhum endpoint abaixo existe hoje. Esta seção marca o estado `[CURRENT]` como **vazio** e toda a API como **`[PLANNED]`**.
+| Método | Endpoint | Auth | Descrição |
+| --- | --- | --- | --- |
+| `GET` | `/health` | pública | A API está no ar (independe do banco). |
+| `GET` | `/health/db` | pública | Estado da conexão PostgreSQL (`200` ok / `503` indisponível). |
+| `POST` | `/auth/register` | pública | Cadastro de cliente — cria **somente** `CUSTOMER` e devolve sessão. |
+| `POST` | `/auth/login` | pública | Login (e-mail + senha) — access token sem refresh (ADR-014). |
+| `GET` | `/auth/me` | `Bearer` | Usuário autenticado (também valida a sessão). |
+
+### 1.1 Fase 3 — Restaurante & Reservas (`CURRENT`)
+
+Implementado nesta fase (contratos detalhados em §6/§7/§8/§14; decisões em ADR-017):
+
+| Método | Endpoint | Auth | Descrição |
+| --- | --- | --- | --- |
+| `GET` | `/restaurants` | `Bearer` | Lista restaurantes (`limit`/`offset`). |
+| `POST` | `/restaurants` | `ADMIN` | Cria restaurante + `RestaurantSettings` (defaults ADR-010). |
+| `GET` | `/restaurants/{id}` | `Bearer` | Detalhe do restaurante + settings resumidos. |
+| `PATCH` | `/restaurants/{id}` | `ADMIN` | Atualiza dados do restaurante. |
+| `GET` | `/restaurants/{id}/settings` | `Bearer` | Configurações públicas (§6). |
+| `PATCH` | `/admin/restaurants/{id}/settings` | `ADMIN` | Edita `RestaurantSettings`. |
+| `GET` | `/restaurants/{id}/tables` | `Bearer` | Mesas (CUSTOMER vê só `is_locked=false`). |
+| `POST` | `/tables` | `ADMIN` | Cria mesa. |
+| `PATCH` | `/tables/{id}` | `ADMIN` | Atualiza mesa (`is_locked`, `is_active`, …). |
+| `GET` | `/admin/capacity-rules` | `ADMIN` | Lista `CapacityRule` do restaurante. |
+| `POST` | `/admin/capacity-rules` | `ADMIN` | Cria regra (faixa sobreposta → `422`). |
+| `PATCH` | `/admin/capacity-rules/{id}` | `ADMIN` | Edita regra. |
+| `GET` | `/reservations/availability` | `CUSTOMER` | Disponibilidade (pré-valida, não reserva). |
+| `POST` | `/reservations` | `CUSTOMER` | Cria reserva + alocação (**transacional**). |
+| `GET` | `/reservations` | `Bearer` | CUSTOMER: só as próprias; ADMIN: todas. |
+| `GET` | `/reservations/{id}` | `Bearer` | Detalhe (proprietário \| `ADMIN`). |
+| `PATCH` | `/reservations/{id}` | `Bearer` | Edita + re-aloca (proprietário \| `ADMIN`). |
+| `DELETE` | `/reservations/{id}` | `Bearer` | Cancelamento negocial (sem exclusão física). |
+| `GET` | `/admin/reservations` | `ADMIN` | Lista reservas do restaurante. |
+| `PATCH` | `/admin/reservations/{id}/status` | `ADMIN` | Muda status (transições §4.2 de `DOMAIN_SPEC`). |
+
+> `POST`/`PATCH /restaurants` e `GET /admin/capacity-rules` são **adições** mínimas da Fase 3 (o provisionamento do restaurante e a inspeção das regras são necessários para operar e testar; ver ADR-017).
+
+> Os contratos de `/auth` estão detalhados em §4; `GET /health` e `GET /health/db` são infraestrutura (detalhados em `backend/README.md`). O **primeiro `ADMIN`** é criado por **bootstrap administrativo via CLI** (`python -m app.cli create-admin` — ADR-016); **não** existe endpoint público que crie `ADMIN`. Todos os demais grupos desta especificação continuam **`[PLANNED]`** — o frontend atual ainda simula esses fluxos client-side com `localStorage` (ver `ARCHITECTURE.md`).
 
 ## 2. Principios gerais
 
@@ -55,6 +90,8 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 | Roles | `CUSTOMER`, `ADMIN` |
 | Restrição | Recursos do cliente filtrados por `user_id` do token; recursos admin exigem role `ADMIN`. |
 
+- **Implementado (Backend Foundation):** a `role` e o estado `is_active` são lidos do **banco** a cada request (o `sub` do JWT apenas identifica o usuário); o payload do token **não** é fonte de verdade para autorização. Usuário inativo → `401`.
+
 ---
 
 ## 4. Grupo /auth
@@ -70,6 +107,7 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 - **Response:** `201` — `{ "user": {...}, "token": "..." }`
 - **Erros:** `409` (e-mail já registrado), `422`, `400`.
 - **Finalidade:** criar conta de cliente e devolver sessão.
+- **Restrição (ADR-016):** cria **exclusivamente `CUSTOMER`**; o request **não** expõe `role`. O primeiro `ADMIN` é criado por **bootstrap administrativo via CLI** (`python -m app.cli create-admin`); **não** existe `POST /auth/register-admin`.
 
 ### `POST /auth/login` — Login
 
@@ -113,6 +151,8 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 
 ## 6. Grupo /restaurants
 
+> **`CURRENT` (Fase 3):** `GET /restaurants`, `GET /restaurants/{id}`, `GET /restaurants/{id}/settings` e `GET /restaurants/{id}/tables` estão implementados. `POST /restaurants` e `PATCH /restaurants/{id}` (ADMIN) foram adicionados para provisionar/editar o restaurante (ADR-017). Ao criar o restaurante, a configuração 1:1 (`RestaurantSettings`) é criada com os defaults do ADR-010.
+
 ### `GET /restaurants` — Listar restaurantes
 
 - **Auth:** sim (autenticado) ou pública `[TBD]`. **Role:** `CUSTOMER` | `ADMIN`.
@@ -134,9 +174,17 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 - **Erros:** `404`.
 - **Finalidade:** o cliente conhece durações, antecedências e pessoas permitidas antes de criar/editar reservas (R4, ADR-010).
 
+> **Nomes de campo (`CURRENT`):** os nomes públicos acima (`min_duration_minutes`, `max_duration_minutes`, `duration_step_minutes`, `min_people`, `max_people`, …) são usados **também** no `PATCH /admin/restaurants/{id}/settings` (adicional para o admin). O service mapeia-os para as colunas do domínio `reservation_*_duration_minutes`, `*_people_per_reservation` (DOMAIN_SPEC §2.3). Invariantes (min ≤ step ≤ max, min_people ≤ max_people, antecedência mínima < máxima) são validadas e devolvem `422` se violadas.
+
 ---
 
 ## 7. Grupo /reservations
+
+> **`CURRENT` (Fase 3):** `GET /reservations/availability`, `POST /reservations`, `GET /reservations`, `GET /reservations/{id}`, `PATCH /reservations/{id}` e `DELETE /reservations/{id}` implementados; `GET /admin/reservations` e `PATCH /admin/reservations/{id}/status` (ADMIN) também.
+>
+> - A `Reservation` persiste **`date`** (`YYYY-MM-DD`) + **`start_time`** (`HH:MM`) — o instante de início (`start_at`, UTC) é derivado (DOMAIN_SPEC §2.6/§5.1).
+> - **Status inicial:** a criação grava `PENDING`; o ADMIN confirma via `PATCH /admin/reservations/{id}/status` (transições de `DOMAIN_SPEC` §4.2 — `PENDING → CONFIRMED → COMPLETED \| NO_SHOW`; `PENDING`/`CONFIRMED → CANCELLED`).
+> - `R15` (reservas simultâneas do mesmo cliente) permanece `[TBD]` e **não** é aplicada (ADR-017).
 
 ### `GET /reservations/availability` — Disponibilidade
 
@@ -201,6 +249,8 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 ## 8. Grupo /tables
 
 > As mesas são recursos do restaurante. A leitura pública consulta no contexto do restaurante; a gestão admin pode residir em `/admin/tables` ou directo em `/tables` (decisão de roteamento `[TBD]`).
+>
+> **`CURRENT` (Fase 3):** implementados `GET /restaurants/{id}/tables` (leitura), `POST /tables` e `PATCH /tables/{id}` (ADMIN). Rótulo único por restaurante (`UNIQUE(restaurant_id, label)` → `409` em duplicidade). O `PATCH` também aceita `is_locked` (R8) e `is_active`.
 
 ### `GET /restaurants/{id}/tables` — Listar mesas (público)
 
@@ -402,6 +452,8 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 ## 14. Grupo /admin
 
 > Endpoints de gestão (role `ADMIN`). Agrupados sob `/admin` para o painel; os recursos de domínio mantêm role-check nos seus módulos (ver nota final).
+>
+> **`CURRENT` (Fase 3):** implementados `PATCH /admin/restaurants/{id}/settings`, `POST`/`PATCH /admin/capacity-rules[/{id}]` (+ `GET /admin/capacity-rules?restaurant_id=`, adição ADR-017), `GET /admin/reservations` e `PATCH /admin/reservations/{id}/status`.
 
 ### `GET /admin/dashboard` — Resumo operativo
 
@@ -438,4 +490,4 @@ O frontend atual funciona **sem backend**: dados simulados, estado em memória e
 
 > **Nota final:** a agrupação `/admin` é organizacional; a autorização (role `ADMIN`) aplica-se em cada módulo de domínio. Decisão de roteamento final `[TBD]`.
 
-> Fim de `API_SPEC.md`. Toda a seção é `[PLANNED]`; não existe ainda nenhum endpoint (`CURRENT`: vazio).
+> Fim de `API_SPEC.md`. Já existem (`CURRENT`): a fundação do backend (§1 — `GET /health`, `GET /health/db` e o grupo `/auth`) e a **Fase 3 — Restaurante & Reservas** (§1.1, §6/§7/§8/§14). Os grupos `/menu`, `/preorders`, `/reviews`, `/events` e `/notifications` permanecem `[PLANNED]`.

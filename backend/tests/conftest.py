@@ -46,3 +46,61 @@ def migrated_db():
     command.upgrade(config, "head")
 
     yield
+
+
+# ---------------------------------------------------------------------------
+# Fixtures de provisionamento (Fase 3 — exigem PostgreSQL; auto-skip sem banco)
+# Reutilizadas pelos testes de integração de restaurantes/reservas.
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def admin_headers(client, migrated_db) -> dict:
+    """Cria um `ADMIN` via service (ADR-016) e devolve headers autenticados."""
+    from uuid import uuid4
+
+    from app.core.database import SessionLocal
+    from app.modules.users import service as users_service
+
+    email = f"admin-{uuid4()}@example.com"
+    with SessionLocal() as db:
+        users_service.create_admin_user(
+            db, name="Admin", email=email, password="segredo123"
+        )
+
+    response = client.post(
+        "/auth/login", json={"email": email, "password": "segredo123"}
+    )
+    assert response.status_code == 200, response.text
+    return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+@pytest.fixture
+def customer_factory(client, migrated_db):
+    """Fábrica de clientes autenticados: retorna `(headers, user_id)`."""
+    from uuid import uuid4
+
+    def _factory():
+        email = f"customer-{uuid4()}@example.com"
+        response = client.post(
+            "/auth/register",
+            json={"name": "Cliente", "email": email, "password": "segredo123"},
+        )
+        assert response.status_code == 201, response.text
+        body = response.json()
+        return {"Authorization": f"Bearer {body['token']}"}, body["user"]["id"]
+
+    return _factory
+
+
+@pytest.fixture
+def restaurant_factory(client, admin_headers):
+    """Cria restaurantes (com `RestaurantSettings` default) e devolve o payload."""
+    from uuid import uuid4
+
+    def _factory(**overrides):
+        payload = {"name": "Ocean Blue", "slug": f"ocean-blue-{uuid4().hex[:10]}"}
+        payload.update(overrides)
+        response = client.post("/restaurants", json=payload, headers=admin_headers)
+        assert response.status_code == 201, response.text
+        return response.json()
+
+    return _factory

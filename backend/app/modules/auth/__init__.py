@@ -4,7 +4,9 @@ Escopo desta fase (docs/ROADMAP.md — Fase 2):
 - Registro de cliente (CUSTOMER), login e perfil da sessão, conforme
   docs/API_SPEC.md §4.
 - JWT access token sem refresh (ADR-014).
-- Criação de ADMIN fica pendente de decisão de seed (D6 [TBD]) — sem endpoint aqui.
+- Criação de `ADMIN` **não** acontece aqui: o cadastro público cria somente `CUSTOMER`;
+  o primeiro `ADMIN` é criado por bootstrap administrativo via CLI — `users.service` +
+  `app/cli.py` (ADR-016).
 
 Fluxos completos de negócio (recuperação de senha, refresh etc.) não fazem
 parte desta fase nem do MVP (docs/DECISIONS.md — ADR-014).

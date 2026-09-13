@@ -18,9 +18,14 @@ from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.health import router as health_router
 from app.modules.auth.router import router as auth_router
+from app.modules.reservations.router import admin_router as reservations_admin_router
+from app.modules.reservations.router import router as reservations_router
+from app.modules.restaurants.router import admin_router as restaurants_admin_router
+from app.modules.restaurants.router import router as restaurants_router
+from app.modules.restaurants.router import tables_router
 
 API_TITLE = "Blue API"
-API_VERSION = "0.1.0"
+API_VERSION = "0.2.0"
 
 
 def _configure_logging() -> None:
@@ -45,6 +50,13 @@ def create_app() -> FastAPI:
 
     # Módulos da foundation
     application.include_router(auth_router)
+
+    # Fase 3 — restaurante e reservas (docs/API_SPEC.md §6/§7/§8/§14)
+    application.include_router(restaurants_router)
+    application.include_router(tables_router)
+    application.include_router(restaurants_admin_router)
+    application.include_router(reservations_router)
+    application.include_router(reservations_admin_router)
 
     @application.exception_handler(AppError)
     async def _app_error_handler(request: Request, exc: AppError) -> JSONResponse:

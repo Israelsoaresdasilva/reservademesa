@@ -114,6 +114,8 @@ Regras gerais:
 
 **Regras:** faixa de duração válida (min ≤ step ≤ max); janela de cancelamento positiva; antecedência mínima < antecedência máxima; os defaults (ADR-010) são valores de configuração aplicados pelo service — **não** são constantes do domínio e podem ser alterados pelo ADMIN.
 
+> **Implementação (Fase 3 — ADR-017):** os campos `[TBD]` `opening_hours` (D10) e `review_allowed_after_hours` (reviews) **não** foram modelados. `min_people_per_reservation`/`max_people_per_reservation` recebem defaults de implementação (`1`/`20`, `[PROPOSTA]`). As invariantes acima são garantidas por `CHECK` no banco e revalidadas no service (`422`).
+
 ### 2.4 Table
 
 **Finalidade:** mesa física do salão, alocável a uma reserva.
@@ -175,6 +177,8 @@ Regras gerais:
 **Relacionamentos:** N:1 `User`, N:1 `Restaurant`, N:N `Table` via `ReservationTable` (ADR-004); 0..1 `Review` (uma avaliação de restaurante por reserva — ADR-012); 0..1 `PreOrder` (D1 aberto).
 
 **Regras:** ver regras R1–R15 em `PRODUCT_SPEC.md` §5; duração e antecedência validadas contra `RestaurantSettings` (ADR-010); cancelamento somente dentro da janela configurada (R14); anti-overlap por mesa §5.1 (ADR-011).
+
+> **Implementação (Fase 3 — ADR-017):** persistem-se `date` + `start_time`; o instante de início/término (`start_at`/`end_at`, UTC) é **derivado** para validação de antecedência e overlap (não se faz comparação *naive* × *aware*). Sem timezone de restaurante enquanto **D10** estiver aberto. O status inicial da criação é `PENDING`. A regra **R15** (reservas simultâneas do mesmo cliente) permanece `[TBD]` e **não** é aplicada.
 
 ### 2.7 ReservationTable
 
@@ -464,4 +468,4 @@ alocação                 (ReservationTable)
 
 ---
 
-> Fim de `DOMAIN_SPEC.md`. Campos `[TBD]`/`[PROPOSTA]` remanescentes serão fechados nas decisões ainda abertas — D1, D3, D6, D9, D10, D11 (ver `DECISIONS.md`).
+> Fim de `DOMAIN_SPEC.md`. Campos `[TBD]`/`[PROPOSTA]` remanescentes serão fechados nas decisões ainda abertas — D1, D3, D9, D10, D11 (ver `DECISIONS.md`).

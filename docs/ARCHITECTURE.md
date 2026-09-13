@@ -57,13 +57,24 @@ Three.js / React Three Fiber (mapa do salão em 3D)
 
 ### Limitações do estado atual
 
-1. Não há backend, banco de dados, autenticação nem API.
+1. O frontend não consome backend: dados simulados, estado em memória e `localStorage`.
 2. Todo o modelo de regra de negócio de reserva é client-side e manipulável (qualquer usuário pode alterar `localStorage`).
 3. Mesas "bloqueadas" por dia são geradas por heurística a partir da data, não por regras reais do restaurante.
 4. Não existe pré-pedido, avaliação de pratos, moderação, status de eventos nem status de reservas.
-5. Não existe conceito de usuário, role ou autenticação.
+5. O frontend não exibe autenticação/sessão (não há login na UI).
 
-**Implicação:** nada descrito como `[PLANNED]` existe ainda.
+**Implicação:** nenhum **fluxo de negócio** descrito como `[PLANNED]` existe ainda.
+
+> **Atualização (Fase 2 — Backend Foundation):** já existe uma **fundação de backend** em `backend/`
+> — `GET /health`, `GET /health/db` e o grupo `/auth` (`register`/`login`/`me`), com o model `User`
+> e roles `CUSTOMER`/`ADMIN` (ADR-015; bootstrap do `ADMIN` via CLI — ADR-016), persistência real em
+> PostgreSQL + Alembic.
+>
+> **Atualização (Fase 3 — Restaurante & Reservas):** implementados `Restaurant`, `RestaurantSettings`,
+> `Table`, `CapacityRule`, `Reservation` e `ReservationTable`, com criação/alteração/cancelamento
+> transacionais, disponibilidade, alocação por `CapacityRule`, overlap por mesa e as migrations
+> `66e313a02830`/`880549f32c7d` (ver ADR-017 e `API_SPEC.md` §1.1). Os fluxos de menu, pré-pedidos,
+> avaliações, eventos, notificações e a integração do frontend continuam `[PLANNED]`.
 
 ---
 
@@ -101,11 +112,12 @@ PostgreSQL
 backend/
 ├── app/
 │   ├── main.py                  # app FastAPI, roteadores, lifespan
+│   ├── cli.py                   # CLI administrativa (bootstrap do ADMIN — ADR-016)
 │   ├── core/                    # config (settings), db (engine/session), security (jwt, hash), exceptions
 │   ├── modules/
 │   │   ├── auth/                # registro, login, tokens, dependência current_user
 │   │   ├── users/               # User, UserRole, perfil
-│   │   ├── restaurants/         # Restaurant, RestaurantSettings, CapacityRule
+│   │   ├── restaurants/         # Restaurant, RestaurantSettings, Table, CapacityRule
 │   │   ├── reservations/        # Reservation, ReservationTable, availability, alocação
 │   │   ├── menu/                # MenuCategory, MenuItem
 │   │   ├── preorders/           # PreOrder, PreOrderItem
@@ -124,8 +136,13 @@ backend/
 | --- | --- | --- |
 | `auth` | Registro, login, emissão/validação de token, dependência de autenticação. | — (usa `users`) |
 | `users` | `User`, `UserRole`, perfil e CRUD próprio. | `User` |
-| `restaurants` | Dados do restaurante, settings e `CapacityRule`. | `Restaurant`, `RestaurantSettings`, `CapacityRule` |
+| `restaurants` | Restaurante, settings 1:1, mesas e `CapacityRule`. | `Restaurant`, `RestaurantSettings`, `Table`, `CapacityRule` |
 | `reservations` | Disponibilidade, overlap, alocação via `ReservationTable`, edit/cancel, status. | `Reservation`, `ReservationTable` |
+
+> **`CURRENT` (Fase 3 — ADR-017):** os módulos `restaurants` e `reservations` estão implementados
+> (models, schemas, repository, service, router, migrations e testes). O módulo `reservations`
+> separa lógica pura (`policies`, `capacity`) de orquestração/transação (`service`) e de acesso a
+> dados (`repository`) — ver a nota de concorrência em §7.
 | `menu` | Categorias e itens do cardápio, disponibilidade. | `MenuCategory`, `MenuItem` |
 | `preorders` | Pré-pedido, itens, transições de estado. | `PreOrder`, `PreOrderItem` |
 | `reviews` | Avaliação do restaurante e de pratos, moderação, resposta. | `Review`, `ReviewItem` |
@@ -214,7 +231,8 @@ Database     (PostgreSQL)
 
 - **PostgreSQL** (ADR-003) — única fonte de verdade.
 - Migrations versionadas com **Alembic** (D8 — ADR-013).
-- Constraints críticos: unicidade de e-mail (`User`); unicidade `(reservation_id, table_id)` em `ReservationTable`; `Review.reservation_id` único (uma avaliação de restaurante por reserva — ADR-012); `UNIQUE(review_id, menu_item_id)` em `ReviewItem` (ADR-012); anti-overlap por mesa validado de forma **transacional** na alocação (ADR-011 — ver `DOMAIN_SPEC.md` §5.1).
+- Constraints críticos: unicidade de e-mail (`User`); `RestaurantSettings` 1:1 (`UNIQUE restaurant_id`); `UNIQUE(restaurant_id, label)` em `Table`; `CHECK` de capacidade/faixas em `Table`/`CapacityRule`/`RestaurantSettings`; FKs `Reservation → User/Restaurant` e `ReservationTable → Reservation/Table`; unicidade `(reservation_id, table_id)` em `ReservationTable`; `Review.reservation_id` único (uma avaliação de restaurante por reserva — ADR-012); `UNIQUE(review_id, menu_item_id)` em `ReviewItem` (ADR-012); anti-overlap por mesa validado de forma **transacional** na alocação (ADR-011 — ver `DOMAIN_SPEC.md` §5.1).
+- **Concorrência na alocação (Fase 3 — ADR-011/ADR-017):** a criação/edição de reserva bloqueia as mesas candidatas com `SELECT ... FOR UPDATE` (ordem determinística por restaurante) **antes** de checar ocupação e inserir as `ReservationTable`, tudo em uma única transação — duas requisições concorrentes disputando a mesma mesa serializam e apenas uma obtém sucesso.
 - Cleanup/retention de dados (notificações, eliminados) — `[TBD]` (D11).
 
 ---
@@ -227,7 +245,7 @@ Database     (PostgreSQL)
 | `DOMAIN_SPEC.md` | Entidades, campos, enums, cardinalidades, regras de reserva. |
 | `API_SPEC.md` | Contratos propostos da API (CURRENT → PLANNED). |
 | `ROADMAP.md` | Plano de implementação (fases 0–8). |
-| `DECISIONS.md` | ADRs e decisões abertas (D1–D10). |
+| `DECISIONS.md` | ADRs (ADR-001–ADR-016) e decisões abertas (D1–D11). |
 
 **Documentação existente do frontend** (preservada, não substituída):
 

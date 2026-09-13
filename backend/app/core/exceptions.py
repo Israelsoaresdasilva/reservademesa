@@ -40,3 +40,20 @@ class ConflictError(AppError):
 
     def __init__(self, detail: str = "Conflict") -> None:
         super().__init__(409, detail)
+
+
+class BadRequestError(AppError):
+    """400 — requisição semanticamente inválida."""
+
+    def __init__(self, detail: str = "Bad request") -> None:
+        super().__init__(400, detail)
+
+
+class UnprocessableError(AppError):
+    """422 — regra de domínio não satisfeita (disponibilidade/validação de negócio).
+
+    Distinto do 422 de formato de request (esse é emitido pelo próprio FastAPI/Pydantic).
+    """
+
+    def __init__(self, detail: str = "Unprocessable entity") -> None:
+        super().__init__(422, detail)

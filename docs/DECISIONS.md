@@ -2,7 +2,7 @@
 
 > **Propósito:** registrar decisões de produto/arquitetura com justificativa e consequências.
 > **Status global:** todas as decisões abaixo estão `Accepted` (vigentes para o MVP). Alterações futuras serão registradas como novo ADR.
-> **Estado v1.0 (validação de produto):** D2, D4 e D5 **fechadas** (ADR-010/011/012); D7 e D8 **fechadas** (ADR-013/014) alinhadas ao stack da Fase 2. ADR-015 registra as decisões concretas de implementação da **Fase 2 (Backend Foundation)**. Restam abertas: D1, D3, D6, D9, D10 e D11 (nenhuma bloqueia o início da Fase 2).
+> **Estado v1.0 (validação de produto):** D2, D4 e D5 **fechadas** (ADR-010/011/012); D7 e D8 **fechadas** (ADR-013/014) alinhadas ao stack da Fase 2. ADR-015 registra as decisões concretas de implementação da **Fase 2 (Backend Foundation)** e ADR-016 fecha **D6** (bootstrap administrativo do primeiro `ADMIN`). ADR-017 registra as decisões de implementação da **Fase 3 (Restaurante & Reservas)**. Restam abertas: D1, D3, D9, D10 e D11 (nenhuma bloqueia as Fases 2/3).
 
 ## Índice
 
@@ -22,6 +22,8 @@
 - [ADR-013 — Migrações com Alembic (D8)](#adr-013--migrações-com-alembic-d8)
 - [ADR-014 — JWT de acesso simples (D7)](#adr-014--jwt-de-acesso-simples-d7)
 - [ADR-015 — Fundação do backend: bibliotecas e escopo de models (Fase 2)](#adr-015--fundação-do-backend-bibliotecas-e-escopo-de-models-fase-2)
+- [ADR-016 — Bootstrap administrativo do primeiro ADMIN (D6)](#adr-016--bootstrap-administrativo-do-primeiro-admin-d6)
+- [ADR-017 — Fase 3: restaurante e reservas](#adr-017--fase-3-restaurante-e-reservas)
 - [Decisões ainda abertas](#decisões-ainda-abertas)
 
 ## Mapa das decisões
@@ -43,6 +45,8 @@
 | ADR-013 | Migrações com Alembic (D8) | ✅ Accepted |
 | ADR-014 | JWT de acesso simples (D7) | ✅ Accepted |
 | ADR-015 | Fundação do backend (libs e escopo de models) | ✅ Accepted |
+| ADR-016 | Bootstrap administrativo do primeiro ADMIN (D6) | ✅ Accepted |
+| ADR-017 | Fase 3: restaurante e reservas (implementação) | ✅ Accepted |
 
 ---
 
@@ -352,6 +356,100 @@ onde ele não existe.
 - Estrutura de testes em `backend/tests/` com marker `integration`.
 - Decisões abertas D6 (seed do primeiro `ADMIN`) e D9 (CI mínimo) permanecem e não bloqueiam
   a fundação (ver docs/ROADMAP.md — Fase 2).
+  _(Atualização: **D6 foi fechada em ADR-016** — bootstrap administrativo via CLI.)_
+
+---
+
+## ADR-016 — Bootstrap administrativo do primeiro ADMIN (D6)
+
+**Status:** Accepted
+
+**Decision:**
+
+O primeiro usuário `ADMIN` é criado por **bootstrap administrativo explícito**, via CLI
+local/operacional (não pelo cadastro público):
+
+```powershell
+python -m app.cli create-admin          # a partir de backend/
+```
+
+O comando:
+
+- solicita e-mail (e nome) — ou os recebe por `--email`/`--name`;
+- solicita a senha **interativamente e sem eco** (`getpass`) e a confirma; a senha **nunca**
+  é aceita por argumento de linha de comando (evita exposição em histórico/lista de processos);
+- cria o usuário com `role = ADMIN`, recusando e-mail já registrado (`ConflictError` → saída `1`);
+- usa o **mesmo hashing** do sistema (Argon2 via `pwdlib` — ADR-015);
+- não exibe credenciais em log/stdout (apenas e-mail, id e role do usuário criado);
+- exige execução administrativa/local/operacional (acesso ao `DATABASE_URL`).
+
+Regras preservadas:
+
+- `POST /auth/register` continua criando **exclusivamente `CUSTOMER`**;
+- **não** existe endpoint público `POST /auth/register-admin`;
+- um `CUSTOMER` **não** pode escolher `ADMIN` no request (o schema público não expõe `role`).
+
+**Reasoning:** o MVP precisa de um caminho para o primeiro administrador sem abrir uma
+porta de criação privilegiada na API pública — que seria um vetor de escalada de
+privilégio. O bootstrap administrativo separa claramente "autocadastro de cliente" de
+"provisionamento de operador".
+
+**Consequences:**
+
+- Fecha **D6** (`Bootstrap do primeiro ADMIN`).
+- `users.service.create_admin_user` concentra a regra; a CLI (`app/cli.py`) é apenas
+  camada de transporte que coleta dados e delega (docs/ARCHITECTURE.md §4).
+- Testes: unitários do parser/entrada segura (sem banco) e de integração do fluxo
+  CLI → login do `ADMIN` (pulados sem PostgreSQL).
+- Atualizar `docs/API_SPEC.md` §1/§4 e `docs/ROADMAP.md` (Fase 2).
+
+---
+
+## ADR-017 — Fase 3: restaurante e reservas
+
+**Status:** Accepted
+
+**Decision:**
+
+Decisões concretas de implementação da **Fase 3 (Restaurante & Reservas)**:
+
+- **Camadas:** o módulo `reservations` separa lógica pura (`policies`, `capacity`), orquestração/
+  transação (`service`) e acesso a dados (`repository`); os routers não contêm regra de negócio.
+- **`Reservation`:** persiste `date` + `start_time` (como em `DOMAIN_SPEC` §2.6 e `API_SPEC` §7) e
+  **deriva** `start_at`/`end_at` em UTC (`policies.combine_start_at`) para antecedência e overlap.
+  Enquanto **D10** estiver aberto não há timezone de restaurante; nunca se compara *naive* × *aware*.
+- **Status inicial:** a criação grava `PENDING`; o `ADMIN` confirma por
+  `PATCH /admin/reservations/{id}/status`. Transições seguem `DOMAIN_SPEC` §4.2 — sem estados novos.
+- **Duração:** válida quando `min ≤ duration ≤ max` **e** `duration` é múltiplo do `step`, todos
+  lidos de `RestaurantSettings` (nunca constantes).
+- **Capacidade:** `people_count` → mesas via `CapacityRule`; sem regra aplicável → `422` (sem
+  fallback). Faixas sobrepostas de um mesmo restaurante são rejeitadas (`422`) no service, com
+  bloqueio da linha do restaurante (`FOR UPDATE`) e `CHECK`s no banco.
+- **Concorrência (ADR-011):** criação/edição alocam em **transação única**: bloqueiam as mesas
+  elegíveis do restaurante com `SELECT ... FOR UPDATE` (ordem determinística) **antes** de checar
+  ocupação e inserir `ReservationTable`. Complementa-se com `UNIQUE(reservation_id, table_id)` e FKs.
+  Avaliou-se — e **não** se adotou por ora — um `EXCLUDE USING gist` sobre um intervalo denormalizado
+  em `reservation_tables` (exigiria `btree_gist` + colunas duplicadas); o bloqueio por linha já
+  garante "apenas uma reserva vence" sem denormalização.
+- **Pessoas por reserva:** `min/max_people_per_reservation` recebem defaults de implementação
+  (`1`/`20`) — `[PROPOSTA]`, configuráveis pelo ADMIN.
+- **Endpoints adicionados** (além dos previstos): `POST`/`PATCH /restaurants`,
+  `GET /admin/capacity-rules` — necessários para provisionar o restaurante e operar/testar.
+- **Escopo negativo:** a regra **R15** (reservas simultâneas do mesmo cliente) **não** é aplicada
+  (semântica `[TBD]`); horário de funcionamento (D10), `PreOrder` (D1), retenção/cleanup (D11),
+  menu, avaliações, eventos e notificações ficam fora desta fase.
+
+**Reasoning:** entregar o domínio de reservas fiel às regras já decididas (ADR-005/010/011), sem
+antecipar decisões abertas (`D1/D3/D9/D10/D11`, R15) nem alterar decisões vigentes.
+
+**Consequences:**
+
+- Migrations incrementais `66e313a02830` (restaurante/settings/tables/capacity) e `880549f32c7d`
+  (reservas/reservation_tables), sobre `3bc98a491108_create_users_table`.
+- `API_SPEC.md` (§1.1/§6/§7/§8/§14), `DOMAIN_SPEC.md` (§2.3/§2.6), `ARCHITECTURE.md` (§1/§3/§7) e
+  `ROADMAP.md` (Fase 3) atualizados.
+- Testes unitários (policies/capacity) e de integração PostgreSQL (auto-skip sem banco); a
+  verificação end-to-end permanece pendente de um PostgreSQL real.
 
 ---
 
@@ -376,13 +474,13 @@ Ajustes menores da revisão de coerência entre `DOMAIN_SPEC.md`, `PRODUCT_SPEC.
 | D3 | Múltiplos restaurantes por instância (operação multi-restaurante do admin) | `[TBD]` |
 | D4 | Overlap de reservas / buffer inter-slot | ✅ **CLOSED** → ADR-011 (sem buffer no MVP) |
 | D5 | Quantas avaliações por reserva e regras de `ReviewItem` | ✅ **CLOSED** → ADR-012 |
-| D6 | Bootstrap do primeiro `ADMIN` (seed) | `[TBD]` |
+| D6 | Bootstrap do primeiro `ADMIN` (seed) | ✅ **CLOSED** → ADR-016 (CLI `python -m app.cli create-admin`; cadastro público cria só `CUSTOMER`) |
 | D7 | Token JWT simple vs JWT + refresh | ✅ **CLOSED** → ADR-014 (access token sem refresh no MVP) |
 | D8 | Ferramenta de migrações e política de dados | ✅ **CLOSED** (ferramenta) → ADR-013 (Alembic); política de dados → D11 |
 | D9 | Testes/CI, deploy e observabilidade | `[TBD]` |
 | D10 | Horários de funcionamento do restaurante (janelas de reserva) | `[TBD]` |
 | D11 | Política de retenção/cleanup de dados (borrado lógico vs físico, retenção de notificações) | `[TBD]` (desmembrada de D8) |
 
-> **Observações:** nenhuma das decisões abertas (D1, D3, D6, D9, D10, D11) bloqueia o início da Fase 2 — ver `ROADMAP.md`. R15 (`PRODUCT_SPEC.md` §5.1) também permanece com semântica exata `[TBD]` (reservas simultâneas do mesmo cliente), sem bloquear o modelo de dados nem a Fase 2.
+> **Observações:** decisões abertas remanescentes: **D1, D3, D9, D10 e D11** — nenhuma bloqueia a Fase 2 (fundação) nem a Fase 3 (reservas), ver `ROADMAP.md`. **R15** (`PRODUCT_SPEC.md` §5.1 — reservas simultâneas do mesmo cliente) também permanece com semântica exata `[TBD]`, sem bloquear o modelo de dados nem as fases citadas.
 
 > **Regra:** quando se decida um `[TBD]`, registra-se como novo ADR neste arquivo e atualiza-se `DOMAIN_SPEC.md`/`API_SPEC.md`.
