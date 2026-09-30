@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { useNotifications, type NotificationItem } from "./NotificationProvider";
+import { useNotifications, type NotificationItem } from "./useNotifications";
 import "./notifications.css";
 
 function formatTime(value: string) {

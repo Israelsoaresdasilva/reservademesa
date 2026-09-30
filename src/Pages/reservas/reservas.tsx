@@ -1,5 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNotifications } from "../../features/notifications";
+import { ApiError } from "../../services/api";
+import {
+  criarReserva,
+  listarReservas,
+  excluirReserva,
+  type Reserva,
+} from "../../services/reservasService";
 
 interface Mesa {
   id: number;
@@ -52,45 +59,15 @@ const STATUS_COLORS: Record<MesaStatus, { bg: string; border: string; text: stri
   reservada: { bg: "rgba(231, 76, 60, 0.8)", border: "#c0392b", text: "#fff" },
 };
 
-interface Reserva {
-  nome?: string;
-  cpf: string;
-  mesas: number[];
-  data: string; // YYYY-MM-DD
-}
-
-
-// Função para gerar mesas bloqueadas aleatórias por dia
-function getMesasBloqueadas(dia: string, totalMesas: number[]): number[] {
-  // Usa a data como seed para garantir que o mesmo dia sempre bloqueie as mesmas mesas
-  let seed = 0;
-  for (let i = 0; i < dia.length; i++) seed += dia.charCodeAt(i) * (i + 1);
-  // Quantidade aleatória entre 5 e 9
-  const qtd = 5 + (seed % 5); // 5 a 9
-  // Shuffle determinístico
-  const mesas = [...totalMesas];
-  for (let i = mesas.length - 1; i > 0; i--) {
-    const j = (seed + i * 31) % (i + 1);
-    [mesas[i], mesas[j]] = [mesas[j], mesas[i]];
-  }
-  return mesas.slice(0, qtd);
-}
-
-function loadReservas(): Reserva[] {
-  try {
-    const saved = localStorage.getItem("mesas_reservadas_v2");
-    return saved ? JSON.parse(saved) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveReservas(reservas: Reserva[]) {
-  localStorage.setItem("mesas_reservadas_v2", JSON.stringify(reservas));
-}
-
-function getMesasReservadas(reservas: Reserva[]): number[] {
-  return reservas.flatMap((r) => r.mesas);
+// Converte as reservas (campo `mesa` = label da mesa) nos ids usados no mapa.
+function idsDeMesasReservadas(reservas: Reserva[], mesas: Mesa[]): number[] {
+  return [
+    ...new Set(
+      reservas
+        .map((r) => mesas.find((m) => m.label === r.mesa)?.id)
+        .filter((id): id is number => typeof id === "number"),
+    ),
+  ];
 }
 
 function formatCpf(value: string): string {
@@ -99,6 +76,26 @@ function formatCpf(value: string): string {
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function formatTelefone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length === 0) return "";
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+const MINHAS_RESERVAS_KEY = "minhas_reservas";
+
+function loadMinhasReservas(): Reserva[] {
+  try {
+    const raw = localStorage.getItem(MINHAS_RESERVAS_KEY);
+    return raw ? (JSON.parse(raw) as Reserva[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 function formatDateBr(date: string): string {
@@ -114,13 +111,6 @@ function todayIsoDate(): string {
   return `${y}-${m}-${d}`;
 }
 
-function diffDays(fromDate: string, toDate: string): number {
-  const from = new Date(`${fromDate}T12:00:00`);
-  const to = new Date(`${toDate}T12:00:00`);
-  const ms = from.getTime() - to.getTime();
-  return Math.round(ms / (1000 * 60 * 60 * 24));
-}
-
 export default function Reservas() {
   // Popup de seleção de data
   const [showDateModal, setShowDateModal] = useState(() => !localStorage.getItem("dataReserva"));
@@ -133,34 +123,38 @@ export default function Reservas() {
   };
   const [loading, setLoading] = useState(true);
   const mesas = loadCalibratedMesas();
-  const [reservas, setReservas] = useState<Reserva[]>(loadReservas);
+  const [reservas, setReservas] = useState<Reserva[]>([]);
   const [selecionadas, setSelecionadas] = useState<number[]>([]);
   const [confirmMsg, setConfirmMsg] = useState("");
   const [showCpfModal, setShowCpfModal] = useState(false);
   const [cpfInput, setCpfInput] = useState("");
   const [nomeInput, setNomeInput] = useState("");
+  const [telefoneInput, setTelefoneInput] = useState("");
+  const [pessoasInput, setPessoasInput] = useState("2");
+  const [horarioInput, setHorarioInput] = useState("");
   const [cpfError, setCpfError] = useState("");
+  const [enviando, setEnviando] = useState(false);
   const [dataReserva, setDataReserva] = useState(() => localStorage.getItem("dataReserva") || "");
   const [showReceipt, setShowReceipt] = useState<Reserva | null>(null);
-  const [lastReserva, setLastReserva] = useState<Reserva | null>(() => {
-    const saved = localStorage.getItem("ultima_reserva_confirmada_v2");
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [minhasReservas, setMinhasReservas] = useState<Reserva[]>(loadMinhasReservas);
+
+  // Persiste as reservas do próprio usuário (sem login) no localStorage.
+  useEffect(() => {
+    localStorage.setItem(MINHAS_RESERVAS_KEY, JSON.stringify(minhasReservas));
+  }, [minhasReservas]);
 
   // Permite nova reserva se o dia for diferente
   const reservaBloqueada = reservas.some(r => r.cpf === cpfInput.replace(/\D/g, "") && r.data === dataReserva);
   const receiptRef = useRef<HTMLDivElement>(null);
-  const demoTimersRef = useRef<number[]>([]);
   const avisoInicialRef = useRef(false);
-  const feedbackNotificadoRef = useRef<string>("");
 
-  // Impede novas reservas após confirmação
-  const reservaConfirmada = !!lastReserva;
+  // Mesas já reservadas (para a data selecionada), vindas do backend.
+  const reservadas = idsDeMesasReservadas(reservas, mesas);
 
-  const reservadasUsuario = getMesasReservadas(reservas);
-  // Mesas bloqueadas aleatórias por dia (sempre recalcula com base em dataReserva e mesas)
-  const mesasBloqueadas = getMesasBloqueadas(dataReserva || todayIsoDate(), mesas.map(m => m.id));
-  const reservadas = [...new Set([...mesasBloqueadas, ...reservadasUsuario])];
+  // Capacidade (lugares) da mesa selecionada — limita o campo "Pessoas".
+  const mesaSelecionada =
+    selecionadas.length > 0 ? mesas.find((m) => m.id === selecionadas[0]) : undefined;
+  const lugaresMesa = mesaSelecionada?.lugares ?? 0;
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1200);
@@ -175,6 +169,17 @@ export default function Reservas() {
     }
   }, [dataReserva]);
 
+  // Carrega as reservas do backend para a data selecionada (marca as mesas ocupadas).
+  useEffect(() => {
+    if (!dataReserva) {
+      setReservas([]);
+      return;
+    }
+    listarReservas(dataReserva)
+      .then(setReservas)
+      .catch(() => setReservas([]));
+  }, [dataReserva]);
+
   useEffect(() => {
     if (avisoInicialRef.current) return;
     avisoInicialRef.current = true;
@@ -184,57 +189,6 @@ export default function Reservas() {
       message: "Chegue com 10 minutos de antecedencia para agilizar seu atendimento.",
     });
   }, [notify]);
-
-  useEffect(() => {
-    if (!lastReserva?.data) return;
-    const hoje = todayIsoDate();
-    if (lastReserva.data >= hoje) return;
-
-    const feedbackKey = `${lastReserva.cpf}-${lastReserva.data}`;
-    if (feedbackNotificadoRef.current === feedbackKey) return;
-    feedbackNotificadoRef.current = feedbackKey;
-
-    notify({
-      type: "info",
-      title: "Feedback pos-reserva",
-      message: `Como foi sua experiencia do dia ${formatDateBr(lastReserva.data)}? Sua opiniao ajuda muito.`,
-    });
-  }, [lastReserva, notify]);
-
-  useEffect(() => {
-    return () => {
-      demoTimersRef.current.forEach((id) => window.clearTimeout(id));
-      demoTimersRef.current = [];
-    };
-  }, []);
-
-  function dispararNotificacoesDemo() {
-    demoTimersRef.current.forEach((id) => window.clearTimeout(id));
-    demoTimersRef.current = [];
-
-    const baseDate = dataReserva || todayIsoDate();
-    const lista = [
-      { type: "success" as const, title: "Reserva confirmada", message: `Mesa 3 reservada para ${formatDateBr(baseDate)}.` },
-      { type: "info" as const, title: "Lembrete da reserva", message: "Faltam 24h para sua reserva. Nos vemos em breve." },
-      { type: "info" as const, title: "Prazo de chegada", message: "Sua mesa fica reservada por ate 15 minutos apos o horario." },
-      { type: "info" as const, title: "Reserva alterada", message: "Sua reserva foi alterada para outra data com sucesso." },
-      { type: "error" as const, title: "Reserva cancelada", message: "Sua reserva foi cancelada. Toque em Reservar novamente." },
-      { type: "error" as const, title: "Mesa indisponivel", message: "Esta mesa acabou de ser reservada. Escolha outra opcao no mapa." },
-      { type: "info" as const, title: "Pagamento e consumo", message: "Para grupos grandes pode haver consumo minimo. Consulte a equipe." },
-      { type: "error" as const, title: "Confirmacao pendente", message: "Revise nome, CPF e data antes de concluir a reserva." },
-      { type: "success" as const, title: "Check-in liberado", message: "Sua reserva e hoje. Check-in disponivel na recepcao." },
-      { type: "success" as const, title: "Beneficio liberado", message: "Cliente fidelidade: voce ganhou uma cortesia especial." },
-      { type: "info" as const, title: "Aviso do restaurante", message: "Hoje teremos menu especial de frutos do mar a noite." },
-      { type: "info" as const, title: "Feedback pos-reserva", message: "Como foi sua experiencia? Avalie sua visita em 1 minuto." },
-    ];
-
-    lista.forEach((item, index) => {
-      const timerId = window.setTimeout(() => {
-        notify(item);
-      }, index * 160);
-      demoTimersRef.current.push(timerId);
-    });
-  }
 
   function getStatus(id: number): MesaStatus {
     if (reservadas.includes(id)) return "reservada";
@@ -304,6 +258,9 @@ export default function Reservas() {
     }
     setCpfInput("");
     setNomeInput("");
+    setTelefoneInput("");
+    setPessoasInput("2");
+    setHorarioInput("");
     setCpfError("");
     notify({
       type: "info",
@@ -318,97 +275,86 @@ export default function Reservas() {
     setShowCpfModal(true);
   }
 
-  function handleConfirmarComCpf() {
+  async function handleConfirmarComCpf() {
+    if (enviando) return;
     if (!nomeInput.trim()) {
       setCpfError("Por favor, informe seu nome.");
-      notify({
-        type: "error",
-        title: "Confirmacao pendente",
-        message: "Informe seu nome para concluir a reserva.",
-      });
+      notify({ type: "error", title: "Confirmacao pendente", message: "Informe seu nome para concluir a reserva." });
       return;
     }
     const cpfDigits = cpfInput.replace(/\D/g, "");
     if (cpfDigits.length !== 11) {
       setCpfError("CPF inválido. Deve conter 11 números.");
-      notify({
-        type: "error",
-        title: "Confirmacao pendente",
-        message: "CPF invalido. Digite os 11 numeros para continuar.",
-      });
+      notify({ type: "error", title: "Confirmacao pendente", message: "CPF invalido. Digite os 11 numeros para continuar." });
       return;
     }
     if (reservas.some((r) => r.cpf === cpfDigits && r.data === dataReserva)) {
-      setCpfError("Este CPF já possui uma reserva para este dia.");
-      notify({
-        type: "error",
-        title: "Reserva duplicada",
-        message: "Este CPF ja possui reserva para a mesma data.",
-      });
+      setCpfError("Este CPF já possui uma reserva para esta data.");
       return;
     }
-    const novaReserva: Reserva = { cpf: cpfDigits, mesas: [...selecionadas], data: dataReserva, nome: nomeInput.trim() };
-    const novasReservas = [...reservas, novaReserva];
-    setReservas(novasReservas);
-    saveReservas(novasReservas);
-    setSelecionadas([]);
-    setShowCpfModal(false);
-    setCpfInput("");
-    setNomeInput("");
-    setDataReserva("");
-    setShowReceipt(novaReserva);
-    setLastReserva(novaReserva);
-    localStorage.setItem("ultima_reserva_confirmada_v2", JSON.stringify(novaReserva));
-
-    const hoje = todayIsoDate();
-    const diasParaReserva = diffDays(novaReserva.data, hoje);
-    const totalReservasCliente = novasReservas.filter((r) => r.cpf === cpfDigits).length;
-
-    if (lastReserva && lastReserva.cpf === cpfDigits && lastReserva.data !== novaReserva.data) {
-      notify({
-        type: "info",
-        title: "Reserva alterada",
-        message: `Sua reserva foi atualizada para ${formatDateBr(novaReserva.data)}.`,
-      });
+    if (!telefoneInput.trim()) {
+      setCpfError("Informe seu telefone de contato.");
+      return;
+    }
+    const pessoas = Number(pessoasInput);
+    if (!Number.isInteger(pessoas) || pessoas < 1) {
+      setCpfError("Informe o número de pessoas.");
+      return;
+    }
+    if (lugaresMesa > 0 && pessoas > lugaresMesa) {
+      setCpfError(`Esta mesa comporta no máximo ${lugaresMesa} pessoas.`);
+      return;
+    }
+    if (!horarioInput) {
+      setCpfError("Selecione o horário da reserva.");
+      return;
+    }
+    if (selecionadas.length === 0) {
+      setCpfError("Selecione uma mesa.");
+      return;
+    }
+    if (!dataReserva) {
+      setCpfError("Selecione a data da reserva.");
+      return;
     }
 
-    notify({
-      type: "success",
-      title: "Reserva confirmada",
-      message: `Mesa ${novaReserva.mesas.join(", ")} reservada para ${formatDateBr(novaReserva.data)}.`,
-    });
+    const mesaLabel = mesas.find((m) => m.id === selecionadas[0])?.label ?? String(selecionadas[0]);
 
-    if (diasParaReserva === 1) {
-      notify({
-        type: "info",
-        title: "Lembrete da reserva",
-        message: "Faltam 24h para sua reserva. Te esperamos.",
+    setEnviando(true);
+    setCpfError("");
+    try {
+      const novaReserva = await criarReserva({
+        nome: nomeInput.trim(),
+        cpf: cpfDigits,
+        telefone: telefoneInput.trim(),
+        numeroPessoas: pessoas,
+        data: dataReserva,
+        horario: horarioInput,
+        mesa: mesaLabel,
       });
-    } else if (diasParaReserva === 0) {
-      notify({
-        type: "info",
-        title: "Lembrete da reserva",
-        message: "Sua reserva e hoje. Faltam poucas horas para seu horario.",
-      });
+
+      setReservas((prev) => [...prev, novaReserva]);
+      setMinhasReservas((prev) => [...prev, novaReserva]);
+      setSelecionadas([]);
+      setShowCpfModal(false);
+      setCpfInput("");
+      setNomeInput("");
+      setTelefoneInput("");
+      setPessoasInput("2");
+      setHorarioInput("");
+      setShowReceipt(novaReserva);
+
       notify({
         type: "success",
-        title: "Check-in liberado",
-        message: "Pode fazer seu check-in na entrada ao chegar no restaurante.",
+        title: "Reserva confirmada",
+        message: `Mesa ${novaReserva.mesa} reservada para ${formatDateBr(novaReserva.data)} às ${novaReserva.horario}.`,
       });
-    } else if (diasParaReserva > 1) {
-      notify({
-        type: "info",
-        title: "Lembrete programado",
-        message: "Vamos te lembrar novamente perto da data da reserva.",
-      });
-    }
-
-    if (totalReservasCliente >= 2) {
-      notify({
-        type: "success",
-        title: "Beneficio fidelidade",
-        message: "Voce recebeu um beneficio especial por reservar novamente.",
-      });
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Erro inesperado ao confirmar a reserva.";
+      setCpfError(message);
+      notify({ type: "error", title: "Falha na reserva", message });
+    } finally {
+      setEnviando(false);
     }
   }
 
@@ -439,22 +385,21 @@ export default function Reservas() {
     img.src = url;
   }, []);
 
-  // Remove reserva específica por CPF e data
-  function handleCancelarReservaPorCpfData(cpf: string, data: string) {
-    const novas = reservas.filter(r => !(r.cpf === cpf && r.data === data));
-    setReservas(novas);
-    saveReservas(novas);
-    if (lastReserva && lastReserva.cpf === cpf && lastReserva.data === data) {
-      setLastReserva(null);
-      localStorage.removeItem("ultima_reserva_confirmada_v2");
+  // Exclui uma reserva pelo id (chamada ao backend).
+  async function handleCancelarReserva(id: string) {
+    try {
+      await excluirReserva(id);
+      setReservas((prev) => prev.filter((r) => r.id !== id));
+      setMinhasReservas((prev) => prev.filter((r) => r.id !== id));
+      setConfirmMsg("Reserva cancelada.");
+      setTimeout(() => setConfirmMsg(""), 4000);
+      notify({ type: "error", title: "Reserva cancelada", message: "A reserva foi cancelada." });
+    } catch (error) {
+      const message = error instanceof ApiError ? error.message : "Erro ao cancelar a reserva.";
+      setConfirmMsg(message);
+      setTimeout(() => setConfirmMsg(""), 4000);
+      notify({ type: "error", title: "Falha ao cancelar", message });
     }
-    setConfirmMsg("Reserva cancelada.");
-    setTimeout(() => setConfirmMsg("") , 4000);
-    notify({
-      type: "error",
-      title: "Reserva cancelada",
-      message: `A reserva do dia ${formatDateBr(data)} foi cancelada.`,
-    });
   }
 
   
@@ -808,7 +753,7 @@ export default function Reservas() {
             Mesas selecionadas
           </span>
 
-          {selecionadas.length === 0 && reservadas.length === 0 ? (
+          {selecionadas.length === 0 && minhasReservas.length === 0 ? (
             <div
               style={{
                 marginTop: 16,
@@ -894,8 +839,8 @@ export default function Reservas() {
                   );
                 })}
 
-              {/* Reservas já feitas (vermelhas) */}
-              {reservas.map((reserva, idx) => (
+              {/* Minhas reservas (vermelhas) */}
+              {minhasReservas.map((reserva, idx) => (
                 <div
                   key={`reserva-${idx}`}
                   style={{
@@ -925,11 +870,11 @@ export default function Reservas() {
                         fontSize: "0.85rem",
                       }}
                     >
-                      {reserva.mesas.join(",")}
+                      {reserva.mesa}
                     </div>
                     <div>
                       <div style={{ color: "#e8f6ff", fontSize: "0.88rem", fontWeight: 600 }}>
-                        Mesa(s): {reserva.mesas.join(",")}
+                        Mesa: {reserva.mesa}
                       </div>
                       <div style={{ color: "#e74c3c", fontSize: "0.72rem", fontWeight: 500 }}>
                         Reservada
@@ -960,7 +905,7 @@ export default function Reservas() {
                       Ver Reserva
                     </button>
                     <button
-                      onClick={() => handleCancelarReservaPorCpfData(reserva.cpf, reserva.data)}
+                      onClick={() => handleCancelarReserva(reserva.id)}
                       style={{
                         background: "rgba(231,76,60,0.12)",
                         border: "1px solid rgba(231,76,60,0.3)",
@@ -1011,7 +956,7 @@ export default function Reservas() {
               <input
                 type="date"
                 value={dataReserva}
-                min={new Date().toISOString().split("T")[0]}
+                min={todayIsoDate()}
                 onChange={(e) => setDataReserva(e.target.value)}
                 style={{
                   width: "100%",
@@ -1075,7 +1020,7 @@ export default function Reservas() {
           {/* Botão confirmar */}
           <button
             onClick={handleAbrirModal}
-            disabled={reservaConfirmada || selecionadas.length === 0}
+            disabled={enviando || selecionadas.length === 0}
             style={{
               width: "100%",
               padding: "13px 0",
@@ -1096,27 +1041,6 @@ export default function Reservas() {
             }}
           >
             Confirmar Reserva
-          </button>
-
-          <button
-            onClick={dispararNotificacoesDemo}
-            type="button"
-            style={{
-              width: "100%",
-              padding: "11px 0",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              borderRadius: 6,
-              border: "1px solid rgba(77, 179, 216, 0.35)",
-              background: "rgba(13, 49, 79, 0.45)",
-              color: "#9ed0e6",
-              cursor: "pointer",
-              letterSpacing: "0.14em",
-              textTransform: "uppercase" as const,
-              fontFamily: "Manrope, sans-serif",
-            }}
-          >
-            Ver Todas Notificacoes
           </button>
 
         </div>
@@ -1400,6 +1324,128 @@ export default function Reservas() {
                   transition: "border-color 0.3s",
                 }}
               />
+              {reservaBloqueada && (
+                <p style={{ color: "#e74c3c", fontSize: "0.78rem", marginTop: 4, fontWeight: 600 }}>
+                  Este CPF já possui uma reserva para esta data.
+                </p>
+              )}
+              <label
+                style={{
+                  display: "block",
+                  fontSize: "0.72rem",
+                  fontWeight: 600,
+                  color: "#7fb8d4",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  marginBottom: 8,
+                  marginTop: 12,
+                }}
+              >
+                Telefone
+              </label>
+              <input
+                type="tel"
+                value={telefoneInput}
+                onChange={(e) => {
+                  setTelefoneInput(formatTelefone(e.target.value));
+                  setCpfError("");
+                }}
+                placeholder="(21) 99999-9999"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  fontSize: "1.1rem",
+                  fontFamily: "Manrope, sans-serif",
+                  fontWeight: 600,
+                  background: "rgba(77, 179, 216, 0.08)",
+                  border: "2px solid rgba(77, 179, 216, 0.2)",
+                  borderRadius: 12,
+                  color: "#e8f6ff",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  marginBottom: 12,
+                }}
+              />
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      color: "#7fb8d4",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Pessoas
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={lugaresMesa > 0 ? lugaresMesa : undefined}
+                    value={pessoasInput}
+                    onChange={(e) => {
+                      setPessoasInput(e.target.value);
+                      setCpfError("");
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      fontSize: "1.1rem",
+                      fontFamily: "Manrope, sans-serif",
+                      fontWeight: 600,
+                      background: "rgba(77, 179, 216, 0.08)",
+                      border: "2px solid rgba(77, 179, 216, 0.2)",
+                      borderRadius: 12,
+                      color: "#e8f6ff",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <div style={{ color: "#7fb8d4", fontSize: "0.7rem", marginTop: 6, fontWeight: 600 }}>
+                    Máximo {lugaresMesa} pessoas
+                  </div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.72rem",
+                      fontWeight: 600,
+                      color: "#7fb8d4",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                      marginBottom: 8,
+                    }}
+                  >
+                    Horário
+                  </label>
+                  <input
+                    type="time"
+                    value={horarioInput}
+                    onChange={(e) => {
+                      setHorarioInput(e.target.value);
+                      setCpfError("");
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      fontSize: "1.1rem",
+                      fontFamily: "Manrope, sans-serif",
+                      fontWeight: 600,
+                      background: "rgba(77, 179, 216, 0.08)",
+                      border: "2px solid rgba(77, 179, 216, 0.2)",
+                      borderRadius: 12,
+                      color: "#e8f6ff",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      colorScheme: "dark",
+                    }}
+                  />
+                </div>
+              </div>
               {cpfError && (
                 <p
                   style={{
@@ -1435,6 +1481,7 @@ export default function Reservas() {
               </button>
               <button
                 onClick={handleConfirmarComCpf}
+                disabled={enviando}
                 style={{
                   flex: 1,
                   padding: "12px 0",
@@ -1444,12 +1491,13 @@ export default function Reservas() {
                   border: "none",
                   background: "linear-gradient(135deg, #1a6fa8 0%, #4db3d8 100%)",
                   color: "#fff",
-                  cursor: "pointer",
+                  cursor: enviando ? "not-allowed" : "pointer",
                   letterSpacing: "0.08em",
                   transition: "all 0.3s",
+                  opacity: enviando ? 0.6 : 1,
                 }}
               >
-                Confirmar
+                {enviando ? "Salvando..." : "Confirmar"}
               </button>
             </div>
           </div>
@@ -1527,9 +1575,9 @@ export default function Reservas() {
                                 </div>
                                 <div style={{ height: 1, background: "rgba(77,179,216,0.15)" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Mesa{showReceipt.mesas.length > 1 ? "s" : ""}</span>
+                  <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Mesa</span>
                   <span style={{ fontSize: "1.15rem", fontWeight: 700 }}>
-                    {showReceipt.mesas.sort((a, b) => a - b).join(", ")}
+                    {showReceipt.mesa}
                   </span>
                 </div>
                 <div style={{ height: 1, background: "rgba(77,179,216,0.15)" }} />
@@ -1541,6 +1589,13 @@ export default function Reservas() {
                 </div>
                 <div style={{ height: 1, background: "rgba(77,179,216,0.15)" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Horário</span>
+                  <span style={{ fontSize: "1.05rem", fontWeight: 600 }}>
+                    {showReceipt.horario}
+                  </span>
+                </div>
+                <div style={{ height: 1, background: "rgba(77,179,216,0.15)" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>CPF</span>
                   <span style={{ fontSize: "0.95rem", fontWeight: 600, letterSpacing: "0.05em" }}>
                     {showReceipt.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
@@ -1548,9 +1603,9 @@ export default function Reservas() {
                 </div>
                 <div style={{ height: 1, background: "rgba(77,179,216,0.15)" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Lugares</span>
+                  <span style={{ fontSize: "0.75rem", color: "#7fb8d4", textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 600 }}>Pessoas</span>
                   <span style={{ fontSize: "1.05rem", fontWeight: 600 }}>
-                    {showReceipt.mesas.reduce((acc, id) => acc + (mesas.find((m) => m.id === id)?.lugares ?? 0), 0)}
+                    {showReceipt.numeroPessoas}
                   </span>
                 </div>
               </div>

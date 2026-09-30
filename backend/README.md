@@ -132,6 +132,34 @@ Models e endpoints de restaurante, mesas, regras de capacidade e reservas (ADR-0
 Contratos em `docs/API_SPEC.md` §1.1/§6/§7/§8/§14. A verificação end-to-end permanece pendente de um
 PostgreSQL real (os testes de integração são pulados sem banco).
 
+## Fluxo público de reserva simples (`/api/reservas`)
+
+Endpoints **sem autenticação** (integram o formulário de reserva do site — roadmap da raiz):
+
+| Método | Endpoint | Descrição |
+| --- | --- | --- |
+| `POST` | `/api/reservas` | Cria a reserva. Regra: **um CPF não pode ter duas reservas na mesma data** (`UNIQUE(cpf, data)` → `409`). |
+| `GET` | `/api/reservas?data=YYYY-MM-DD` | Lista reservas (filtro por data opcional), ordenadas por horário. |
+| `GET` | `/api/reservas/{id}` | Detalhe da reserva. |
+| `DELETE` | `/api/reservas/{id}` | Exclui a reserva (uso administrativo). |
+
+Corpo do `POST`:
+
+```json
+{
+  "nome": "João Silva",
+  "cpf": "123.456.789-00",
+  "telefone": "21999999999",
+  "numeroPessoas": 4,
+  "data": "2026-10-30",
+  "horario": "19:30",
+  "mesa": "12"
+}
+```
+
+Respostas no formato `{ "success": true|false, ... }`. CORS já liberado para o frontend Vite
+(`CORS_ALLOW_ORIGINS` em `app/core/config.py`). O frontend usa `VITE_API_URL` (ver `../.env.example`).
+
 ## Fora desta fase (fases posteriores)
 
 Módulos de negócio ainda não implementados: `menu`, `preorders`, `reviews`, `events`,

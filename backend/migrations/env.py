@@ -24,6 +24,7 @@ from app.core.database import Base  # noqa: E402
 import app.modules.users.model  # noqa: E402, F401  # registra `users` no metadata
 import app.modules.restaurants.model  # noqa: E402, F401  # registra restaurante/tables/capacity
 import app.modules.reservations.model  # noqa: E402, F401  # registra reservations/reservation_tables
+import app.modules.reservas.model  # noqa: E402, F401  # registra `reservas` (fluxo público) no metadata
 
 config = context.config
 

@@ -386,6 +386,11 @@ function Sidebar({
               AVALIAÇÕES
             </a>
           </li>
+          <li>
+            <a href="/admin/reservas" onClick={onClose}>
+              PAINEL ADMIN
+            </a>
+          </li>
         </ul>
       </nav>
     </>

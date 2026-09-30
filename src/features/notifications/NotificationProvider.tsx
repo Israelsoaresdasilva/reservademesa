@@ -1,32 +1,10 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-
-export type NotificationType = "success" | "error" | "info";
-
-export interface NotificationItem {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  createdAt: string;
-  read: boolean;
-}
-
-interface NotifyInput {
-  title: string;
-  message: string;
-  type?: NotificationType;
-}
-
-interface NotificationContextValue {
-  notifications: NotificationItem[];
-  unreadCount: number;
-  notify: (input: NotifyInput) => void;
-  removeNotification: (id: string) => void;
-  clearNotifications: () => void;
-  markAllAsRead: () => void;
-}
-
-const NotificationContext = createContext<NotificationContextValue | null>(null);
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+import {
+  NotificationContext,
+  type NotificationContextValue,
+  type NotificationItem,
+  type NotifyInput,
+} from "./useNotifications";
 
 function createNotification(input: NotifyInput): NotificationItem {
   const now = new Date();
@@ -62,10 +40,10 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
-    [notifications]
+    [notifications],
   );
 
-  const value = useMemo(
+  const value = useMemo<NotificationContextValue>(
     () => ({
       notifications,
       unreadCount,
@@ -74,16 +52,8 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       clearNotifications,
       markAllAsRead,
     }),
-    [notifications, unreadCount, notify, removeNotification, clearNotifications, markAllAsRead]
+    [notifications, unreadCount, notify, removeNotification, clearNotifications, markAllAsRead],
   );
 
   return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
-}
-
-export function useNotifications() {
-  const context = useContext(NotificationContext);
-  if (!context) {
-    throw new Error("useNotifications precisa ser usado dentro de NotificationProvider.");
-  }
-  return context;
 }

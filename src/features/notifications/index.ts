@@ -1,2 +1,3 @@
 export { NotificationCenter } from "./NotificationCenter";
-export { NotificationProvider, useNotifications } from "./NotificationProvider";
+export { NotificationProvider } from "./NotificationProvider";
+export { useNotifications } from "./useNotifications";

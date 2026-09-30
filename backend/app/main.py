@@ -12,12 +12,14 @@ sobe mesmo se o PostgreSQL estiver indisponível; `/health/db` reporta o estado.
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.health import router as health_router
 from app.modules.auth.router import router as auth_router
+from app.modules.reservas.router import router as reservas_router
 from app.modules.reservations.router import admin_router as reservations_admin_router
 from app.modules.reservations.router import router as reservations_router
 from app.modules.restaurants.router import admin_router as restaurants_admin_router
@@ -45,8 +47,20 @@ def create_app() -> FastAPI:
         ),
     )
 
+    # CORS para o frontend de desenvolvimento (Vite). Origens configuráveis via env.
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ALLOW_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
     # Endpoints de infraestrutura
     application.include_router(health_router)
+
+    # Fluxo público de reserva simples (roadmap da raiz) — sem autenticação.
+    application.include_router(reservas_router)
 
     # Módulos da foundation
     application.include_router(auth_router)
