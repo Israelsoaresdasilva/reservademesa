@@ -16,11 +16,15 @@ Patrick Quintino - 06016924
 
 - **Fluxo de reserva full-stack**: o formulário do site (nome, CPF, telefone, número de
   pessoas, data, horário e mesa) agora é salvo no PostgreSQL via API, em vez de `localStorage`.
-- **Regra de negócio no backend**: um mesmo CPF não pode ter duas reservas na mesma data
-  (`UNIQUE(cpf, data)` no banco → `409 Conflict`).
-- **API pública de reservas** (`/api/reservas`): criar, listar (com filtro por data), detalhar
-  e excluir.
+- **Regras de negócio no backend**: um mesmo CPF não pode ter duas reservas na mesma data
+  (`UNIQUE(cpf, data)`) e uma mesma mesa não pode ter duas reservas no mesmo dia
+  (`UNIQUE(mesa, data)`). Violações retornam `409 Conflict`.
+- **API pública de reservas** (`/api/reservas`): criar, listar (com filtro por data), detalhar,
+  editar e excluir.
 - **Painel administrativo** em `/admin/reservas` para ver e excluir as reservas do dia (protegido por login).
+- **Experiência no mapa**: mesas ocupadas aparecem com bolinha vermelha (sem expor quem
+  reservou); o usuário vê apenas as próprias reservas, com limite de pessoas por mesa,
+  máscara de CPF/telefone e aviso de CPF duplicado.
 
 ## Como executar
 
@@ -71,9 +75,10 @@ Endpoints públicos (sem autenticação):
 
 | Método | Endpoint | Descrição |
 | --- | --- | --- |
-| `POST` | `/api/reservas` | Cria a reserva. `409` se o CPF já tiver reserva na mesma data. |
+| `POST` | `/api/reservas` | Cria a reserva. `409` se o CPF já tiver reserva na data ou se a mesa já estiver ocupada no dia. |
 | `GET` | `/api/reservas?data=YYYY-MM-DD` | Lista reservas (filtro por data opcional), ordenadas por horário. |
 | `GET` | `/api/reservas/{id}` | Detalhe da reserva. |
+| `PUT` | `/api/reservas/{id}` | Atualiza a reserva (parcial), revalidando as regras de CPF e mesa. |
 | `DELETE` | `/api/reservas/{id}` | Exclui a reserva (uso administrativo). |
 
 Exemplo de corpo do `POST`:
