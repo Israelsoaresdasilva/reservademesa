@@ -1,4 +1,4 @@
-// Serviço de reservas — consome os endpoints públicos /api/reservas do backend.
+// Serviço de reservas — consome os endpoints públicos /reservas do backend.
 import { request } from "./api";
 
 export interface Reserva {
@@ -37,7 +37,7 @@ interface ListarReservasResponse {
 }
 
 export async function criarReserva(input: CriarReservaInput): Promise<Reserva> {
-  const body = await request<CriarReservaResponse>("/api/reservas", {
+  const body = await request<CriarReservaResponse>("/reservas", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -46,10 +46,10 @@ export async function criarReserva(input: CriarReservaInput): Promise<Reserva> {
 
 export async function listarReservas(data?: string): Promise<Reserva[]> {
   const query = data ? `?data=${encodeURIComponent(data)}` : "";
-  const body = await request<ListarReservasResponse>(`/api/reservas${query}`);
+  const body = await request<ListarReservasResponse>(`/reservas${query}`);
   return body.items;
 }
 
 export async function excluirReserva(id: string): Promise<void> {
-  await request<{ success: boolean }>(`/api/reservas/${id}`, { method: "DELETE" });
+  await request<{ success: boolean }>(`/reservas/${id}`, { method: "DELETE" });
 }

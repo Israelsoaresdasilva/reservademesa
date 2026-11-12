@@ -1233,6 +1233,8 @@ export default function Reservas() {
             </div>
           </div>
         </div>
+      </aside>
+      </main>
       )}
 
       <style>{`
