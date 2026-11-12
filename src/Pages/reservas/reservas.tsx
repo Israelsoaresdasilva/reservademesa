@@ -632,7 +632,7 @@ export default function Reservas() {
             padding: "1.6rem 2rem 0.8rem",
           }}
         >
-<div style="width:100%;height:350px;background:#0d3959;display:flex;align-items:center;justify-content:center;color:#7fb8d4;font-size:1.2rem;font-weight:700;">Planta Baixa do Salão</div>
+<div style="width:100%;height:auto;aspect-ratio:4/3;background:#0d3959;display:flex;align-items:center;justify-content:center;color:#7fb8d4;font-size:1.2rem;font-weight:700;">Planta Baixa do Salão</div>
               style={{
                 width: "100%",
                 height: "auto",
