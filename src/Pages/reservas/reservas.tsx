@@ -640,7 +640,7 @@ export default function Reservas() {
                 userSelect: "none",
                 pointerEvents: "none",
               }}
-            />
+            / 
 
             {/* Mesas clicáveis (dinâmicas — calibradas) */}
             {mesas.length === 0 && (
